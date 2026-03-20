@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# Environment
+.env
+*.env
+
+# Temporary pipeline outputs
+/tmp/temporalos/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+
+# IDEs
+.vscode/settings.json
+.idea/
+*.DS_Store
+
+# Model weights — large binary files, never commit
+*.bin
+*.safetensors
+*.gguf
+*.pt
+*.pth
+finetuning/checkpoints/
+finetuning/datasets/
+
+# Jupyter
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# Docker
+.docker/
+
+# DeepEval
+.deepeval/

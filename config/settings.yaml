@@ -1,0 +1,50 @@
+# TemporalOS — Default Configuration
+# All values here are defaults. Override via environment variables:
+#   AUDIO__WHISPER_MODEL=base
+#   VIDEO__FRAME_INTERVAL_SECONDS=3
+# Or set DATABASE_URL, OPENAI_API_KEY, ANTHROPIC_API_KEY at the top level.
+
+app:
+  name: temporalos
+  env: development
+  upload_dir: /tmp/temporalos/uploads
+  frames_dir: /tmp/temporalos/frames
+
+database:
+  url: postgresql+asyncpg://temporalos:temporalos@localhost:5432/temporalos
+
+openai:
+  model: gpt-4o
+  vision_model: gpt-4o
+  max_tokens: 2048
+  temperature: 0.0
+
+anthropic:
+  model: claude-sonnet-4-5
+  vision_model: claude-sonnet-4-5
+  max_tokens: 2048
+
+video:
+  frame_interval_seconds: 2
+  max_resolution: 1024
+  supported_formats:
+    - mp4
+    - webm
+    - mkv
+    - mov
+
+audio:
+  whisper_model: large-v3     # large-v3 for production; base for fast dev
+  language: en                 # set to "auto" for automatic detection
+  word_timestamps: true
+
+extraction:
+  default_model: gpt4o
+  segment_overlap_ms: 500
+  min_words_per_segment: 3    # skip segments with fewer words than this
+
+telemetry:
+  service_name: temporalos
+  otlp_endpoint: ""           # leave blank to disable OTLP export
+  enabled: true
+  log_level: INFO
