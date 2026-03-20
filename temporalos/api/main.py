@@ -12,7 +12,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from ..config import get_settings
 from ..db.session import init_db
 from ..observability.telemetry import setup_telemetry
-from .routes import finetuning, intelligence, local, observatory, process
+from .routes import finetuning, intelligence, local, metrics, observatory, process, search, stream
 
 _FRONTEND_DIST = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
@@ -43,6 +43,9 @@ app.include_router(observatory.router, prefix="/api/v1")
 app.include_router(intelligence.router, prefix="/api/v1")
 app.include_router(finetuning.router, prefix="/api/v1")
 app.include_router(local.router, prefix="/api/v1")
+app.include_router(metrics.router, prefix="/api/v1")
+app.include_router(search.router, prefix="/api/v1")
+app.include_router(stream.router)  # WebSocket at /ws/stream (no /api/v1 prefix)
 
 
 @app.get("/health", tags=["meta"])

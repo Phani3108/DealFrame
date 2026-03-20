@@ -225,3 +225,103 @@ export const runBenchmark = (file: File) => {
     { method: 'POST', body: form },
   )
 }
+
+// ─── Observability (Phase 7) ─────────────────────────────────────────────────
+
+export interface DriftAlert {
+  metric: string
+  current_mean: number
+  baseline_mean: number
+  drift_score: number
+  is_drifted: boolean
+  message: string
+}
+
+export interface DriftReport {
+  any_drift: boolean
+  window_size: number
+  baseline_size: number
+  total_recorded: number
+  baseline_frozen: boolean
+  alerts: DriftAlert[]
+}
+
+export interface CalibrationBin {
+  lower: number
+  upper: number
+  count: number
+  mean_confidence: number
+  accuracy: number
+}
+
+export interface CalibrationReport {
+  ece: number
+  total_samples: number
+  bins: CalibrationBin[]
+}
+
+export const getDriftReport = () =>
+  request<DriftReport>('/observability/drift')
+
+export const getCalibrationReport = () =>
+  request<CalibrationReport>('/observability/calibration')
+
+export const getReviewQueue = (maxConfidence = 0.5) =>
+  request<{
+    queue_depth: number
+    threshold: number
+    items: unknown[]
+    drift_status: { any_drift: boolean; alert_count: number }
+  }>(`/review/queue?max_confidence=${maxConfidence}`)
+
+// ─── Search (Phase 10) ────────────────────────────────────────────────────────
+
+export interface SearchResultItem {
+  doc_id: string
+  video_id: string
+  timestamp_ms: number
+  timestamp_str: string
+  topic: string
+  risk: string
+  risk_score: number
+  transcript_snippet: string
+  objections: string[]
+  decision_signals: string[]
+  score: number
+}
+
+export const searchSegments = (
+  q: string,
+  risk?: string,
+  topic?: string,
+  limit = 20,
+) => {
+  const params = new URLSearchParams({ q, limit: String(limit) })
+  if (risk) params.set('risk', risk)
+  if (topic) params.set('topic', topic)
+  return request<{ query: string; total: number; results: SearchResultItem[]; filters: Record<string, string | null> }>(
+    `/search?${params}`,
+  )
+}
+
+export const getSearchIndexStats = () =>
+  request<{ document_count: number }>('/search/index/stats')
+
+export const getWinLossPatterns = () =>
+  request<{
+    high_risk_objections: string[]
+    low_risk_topics: string[]
+    avg_risk_score: number
+    risk_distribution: Record<string, number>
+  }>('/search/insights/patterns')
+
+export const getObjectionVelocity = (period: 'week' | 'month' = 'week') =>
+  request<{
+    period: string
+    total: number
+    items: Array<{
+      objection: string
+      trend: string
+      counts_by_period: Array<{ period: string; count: number }>
+    }>
+  }>(`/search/insights/velocity?period=${period}`)

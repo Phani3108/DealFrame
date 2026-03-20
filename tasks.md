@@ -19,7 +19,84 @@
 
 ## Active Tasks
 
-### TASK-009: Phase 6 — Frontend Dashboard
+### TASK-013: Phase 10 — Search & Portfolio Insights
+- **Status**: 🟢 Completed
+- **Date**: 2026-06-11
+- **Prompt/Trigger**: Complete remaining phases + frontend improvements + README with screenshots
+- **Work Done**:
+  - `temporalos/search/indexer.py` — Thread-safe TF-IDF `SearchIndex` with in-memory inverted index, risk+topic filters, document re-indexing, `get_search_index()` singleton
+  - `temporalos/search/query.py` — `SearchEngine` wrapper + `SearchQuery` dataclass + `index_extraction()` convenience method
+  - `temporalos/intelligence/portfolio_insights.py` — `PortfolioInsights`: `win_loss_patterns()`, `objection_velocity()` (week/month bucketing with rising/stable/falling trend detection), `rep_comparison()`
+  - `temporalos/api/routes/search.py` — `GET /search`, `GET /search/index/stats`, `POST /search/index/{video_id}`, `GET /search/insights/patterns`, `GET /search/insights/velocity`, `GET /search/insights/reps`
+  - `tests/e2e/test_phase10_search.py` — 45 tests: SearchIndex (14), SearchEngine (3), PortfolioInsights (12), SearchAPI (11)
+  - **Final result**: 327 passed ✅
+- **Files Changed**:
+  - `temporalos/search/__init__.py` — Created
+  - `temporalos/search/indexer.py` — Created
+  - `temporalos/search/query.py` — Created
+  - `temporalos/intelligence/portfolio_insights.py` — Created
+  - `temporalos/api/routes/search.py` — Created
+  - `tests/e2e/test_phase10_search.py` — Created
+
+### TASK-012: Phase 9 — Scene Intelligence & Vision Pipeline
+- **Status**: 🟢 Completed
+- **Date**: 2026-06-11
+- **Prompt/Trigger**: Complete remaining phases + frontend improvements + README with screenshots
+- **Work Done**:
+  - `temporalos/ingestion/scene_detector.py` — `SceneDetector` using ffprobe `select=gt(scene,threshold)`; uniform 5s fallback for no-ffmpeg environments
+  - `temporalos/ingestion/keyframe_selector.py` — `KeyframeSelector`: XOR-fold perceptual hash from first 512 bytes, Hamming distance deduplication
+  - `temporalos/vision/ocr.py` — `OcrEngine`: EasyOCR → PIL stub → empty fallback chain
+  - `temporalos/vision/slide_classifier.py` — `SlideClassifier` + `FrameType` enum: PIL grayscale + FIND_EDGES, classifies `SLIDE/FACE/SCREEN/CHART/MIXED/UNKNOWN`
+  - `temporalos/vision/pipeline.py` — `VisionPipeline`: chains dedup → OCR → classify → scene tag; `EnrichedFrame.to_dict()`
+  - `tests/e2e/test_phase9_vision.py` — 25 tests: SceneDetector (5), KeyframeSelector (5), OcrEngine (4), SlideClassifier (5), VisionPipeline (7)
+  - **Final result**: 327 passed ✅
+- **Files Changed**:
+  - `temporalos/ingestion/scene_detector.py` — Created
+  - `temporalos/ingestion/keyframe_selector.py` — Created
+  - `temporalos/vision/ocr.py` — Created
+  - `temporalos/vision/slide_classifier.py` — Created
+  - `temporalos/vision/pipeline.py` — Created
+  - `tests/e2e/test_phase9_vision.py` — Created
+
+### TASK-011: Phase 8 — Streaming Pipeline
+- **Status**: 🟢 Completed
+- **Date**: 2026-06-11
+- **Prompt/Trigger**: Complete remaining phases + frontend improvements + README with screenshots
+- **Work Done**:
+  - `temporalos/audio/streaming.py` — `TranscriptChunk`, `MockStreamingASR` (byte-rate model: 32000 bytes/sec), `get_streaming_asr()` factory
+  - `temporalos/pipeline/streaming_pipeline.py` — `StreamingPipeline`: async generator pattern; 5s default chunk window; back-pressure via `asyncio.Queue(maxsize=100)`
+  - `temporalos/api/routes/stream.py` — WebSocket `/ws/stream`: binary audio frames + `{"type":"end"}` control; pushes `{"type":"result"}` + `{"type":"done"}`
+  - `tests/e2e/test_phase8_streaming.py` — 19 tests: TranscriptChunk (3), MockStreamingASR (6), StreamingPipeline (6), WebSocket (3)
+  - **Final result**: 327 passed ✅
+- **Files Changed**:
+  - `temporalos/audio/streaming.py` — Created
+  - `temporalos/pipeline/__init__.py` — Created
+  - `temporalos/pipeline/streaming_pipeline.py` — Created
+  - `temporalos/api/routes/stream.py` — Created
+  - `tests/e2e/test_phase8_streaming.py` — Created
+
+### TASK-010: Phase 7 — Observability & Drift Detection
+- **Status**: 🟢 Completed
+- **Date**: 2026-06-11
+- **Prompt/Trigger**: Complete remaining phases + frontend improvements + README with screenshots
+- **Work Done**:
+  - `temporalos/observability/metrics.py` — `PipelineMetrics` singleton via `get_metrics()`; Prometheus Counter/Histogram/Gauge; safe no-op if `prometheus-client` not installed; `render_prometheus()` → `(bytes, content_type)`
+  - `temporalos/observability/drift_detector.py` — `DriftDetector`: Welch's t-test (pure Python, no scipy) for confidence drift; KL divergence for topic distribution shift; rolling baseline (100 samples) + current window (50 samples); fixed zero-variance edge case
+  - `temporalos/observability/calibration.py` — `ConfidenceCalibrator`: ECE (Expected Calibration Error), reliability diagram bins, 10-bin histogram
+  - `temporalos/api/routes/metrics.py` — `GET /metrics`, `GET /observability/drift`, `GET /observability/calibration`, `POST /observability/calibration/sample`, `GET /review/queue`, `POST /review/{id}/label`
+  - Added `prometheus-client>=0.21.0` to `pyproject.toml`
+  - `tests/e2e/test_phase7_observability.py` — 37 tests: PipelineMetrics (9), DriftDetector (11), ConfidenceCalibrator (8), ObservabilityAPI (9)
+  - **Final result**: 327 passed ✅
+- **Files Changed**:
+  - `temporalos/observability/__init__.py` — Created
+  - `temporalos/observability/metrics.py` — Created
+  - `temporalos/observability/drift_detector.py` — Created
+  - `temporalos/observability/calibration.py` — Created
+  - `temporalos/api/routes/metrics.py` — Created
+  - `pyproject.toml` — Modified (added prometheus-client)
+  - `tests/e2e/test_phase7_observability.py` — Created
+
+
 - **Status**: 🟢 Completed
 - **Date**: 2026-06-10
 - **Prompt/Trigger**: User: "lets continue with the next phase. Let's test thoroughly after that's done. Let's ensure the frontend is properly done with a white background, new good elements and then we can push to the github repo."
@@ -262,3 +339,10 @@
 | TASK-004 | Phase 0 + Phase 1 Implementation | 🟢 | 2026-03-20 |
 | TASK-005 | Add Mandatory E2E Testing Rule + Phase 1 Test Suite | 🟢 | 2026-03-20 |
 | TASK-006 | Push to GitHub with README | 🟢 | 2026-03-20 |
+| TASK-007 | Phase 4 — Fine-tuning Arc | 🟢 | 2026-06-10 |
+| TASK-008 | Phase 5 — Local SLM Pipeline | 🟢 | 2026-06-10 |
+| TASK-009 | Phase 6 — Frontend Dashboard | 🟢 | 2026-06-10 |
+| TASK-010 | Phase 7 — Observability & Drift Detection | 🟢 | 2026-06-11 |
+| TASK-011 | Phase 8 — Streaming Pipeline | 🟢 | 2026-06-11 |
+| TASK-012 | Phase 9 — Scene Intelligence & Vision Pipeline | 🟢 | 2026-06-11 |
+| TASK-013 | Phase 10 — Search & Portfolio Insights | 🟢 | 2026-06-11 |

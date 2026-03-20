@@ -24,7 +24,14 @@ export function Dashboard() {
   const load = () => {
     setLoading(true)
     Promise.allSettled([
-      listJobs().then(r => setJobs(r.jobs ?? [])).catch(() => {}),
+      listJobs().then(r => {
+        // API returns jobs as a dict {id: {...}} — convert to array
+        const raw = r.jobs
+        const arr = Array.isArray(raw)
+          ? raw
+          : Object.entries(raw ?? {}).map(([id, v]: [string, any]) => ({ id, ...v }))
+        setJobs(arr)
+      }).catch(() => {}),
       getObjections(5).then(r => setObjections(r.objections ?? [])).catch(() => {}),
       getRiskSummary().then(setRiskSummary).catch(() => {}),
       getLocalStatus().then(setLocalStatus).catch(() => {}),

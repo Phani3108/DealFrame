@@ -8,7 +8,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com)
-[![Tests](https://img.shields.io/badge/tests-208%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-327%20passing-brightgreen.svg)](#testing)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 </div>
@@ -111,6 +111,45 @@ This project is intentionally scoped around three deep skill areas:
 | **4** | Fine-tuning Arc (LoRA dataset → training → eval → registry) | ✅ Done |
 | **5** | Local SLM Pipeline (zero API calls + rule-based fallback) | ✅ Done |
 | **6** | Frontend Dashboard (React + Vite + Tailwind SPA) | ✅ Done |
+| **7** | Observability & Drift Detection (Prometheus + ECE + review queue) | ✅ Done |
+| **8** | Streaming Pipeline (WebSocket ASR + real-time extraction) | ✅ Done |
+| **9** | Scene Intelligence & Vision Pipeline (OCR + slide classification) | ✅ Done |
+| **10** | Search & Portfolio Insights (TF-IDF + objection velocity) | ✅ Done |
+
+---
+
+## Frontend Screenshots
+
+<div align="center">
+
+### Dashboard
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Upload & Process
+![Upload](docs/screenshots/upload.png)
+
+### Observatory (Multi-model comparison)
+![Observatory](docs/screenshots/observatory.png)
+
+### Analytics
+![Intelligence](docs/screenshots/intelligence.png)
+
+### Fine-tuning
+![Fine-tuning](docs/screenshots/finetuning.png)
+
+### Local Pipeline
+![Local Pipeline](docs/screenshots/local_pipeline.png)
+
+### Observability (Drift Detection + Calibration)
+![Observability](docs/screenshots/observability.png)
+
+### Search
+![Search](docs/screenshots/search.png)
+
+### Live Streaming
+![Streaming](docs/screenshots/streaming.png)
+
+</div>
 
 ---
 
@@ -182,7 +221,7 @@ make test-e2e
 make test-all
 ```
 
-**Current test status**: `208 passed, 0 failed`
+**Current test status**: `327 passed, 0 failed`
 
 ---
 
@@ -192,24 +231,26 @@ make test-all
 TemporalOS/
 ├── temporalos/
 │   ├── api/
-│   │   └── routes/     # process, observatory, intelligence, finetuning, local
+│   │   └── routes/     # process, observatory, intelligence, finetuning, local, metrics, search, stream
 │   ├── alignment/      # Temporal frame↔transcript fusion
-│   ├── audio/          # Whisper batch transcription
+│   ├── audio/          # Whisper batch transcription + MockStreamingASR (Phase 8)
 │   ├── core/           # Shared types (Frame, Word, AlignedSegment, ExtractionResult)
 │   ├── db/             # SQLAlchemy models + async session
 │   ├── extraction/
 │   │   └── models/     # GPT-4o, Claude, FineTunedExtractionModel adapters
 │   ├── finetuning/     # DatasetBuilder, LoRATrainer, ExtractionEvaluator, ModelRegistry
-│   ├── ingestion/      # FFmpeg frame extraction
-│   ├── intelligence/   # Multi-video aggregation (Phase 3)
+│   ├── ingestion/      # FFmpeg frame extraction + SceneDetector + KeyframeSelector (Phase 9)
+│   ├── intelligence/   # Multi-video aggregation (Phase 3) + PortfolioInsights (Phase 10)
 │   ├── local/          # LocalPipeline, _RuleBasedExtractor, BenchmarkRunner (Phase 5)
 │   ├── observatory/    # ObservatoryRunner + Comparator (Phase 2)
-│   ├── observability/  # OpenTelemetry telemetry singleton
-│   └── vision/         # BaseVisionModel + GPT-4o / Claude / Qwen2.5-VL adapters
+│   ├── observability/  # OTel telemetry + PipelineMetrics + DriftDetector + ConfidenceCalibrator
+│   ├── pipeline/       # StreamingPipeline async generator (Phase 8)
+│   ├── search/         # TF-IDF SearchIndex + SearchEngine (Phase 10)
+│   └── vision/         # BaseVisionModel + OcrEngine + SlideClassifier + VisionPipeline (Phase 9)
 ├── tests/
 │   ├── conftest.py     # Shared fixtures (synthetic test video, sample data)
 │   ├── unit/           # 47 unit tests per module
-│   └── e2e/            # 130 end-to-end tests — one file per phase
+│   └── e2e/            # 280 end-to-end tests — one file per phase
 ├── evals/
 │   └── extraction_eval.py  # DeepEval metrics + schema_pass_rate()
 ├── config/
@@ -220,7 +261,7 @@ TemporalOS/
 │   ├── src/
 │   │   ├── api/        # Typed API client (all 5 route groups)
 │   │   ├── components/ # Layout, StatCard, Badge, SegmentCard
-│   │   └── pages/      # Dashboard, Upload, Results, Observatory, Intelligence, Finetuning, LocalPipeline
+│   │   └── pages/      # Dashboard, Upload, Results, Observatory, Intelligence, Finetuning, LocalPipeline, Observability, Search, Streaming
 │   ├── dist/           # Built SPA (served by FastAPI at /)
 │   ├── package.json    # React 18 + Vite 5 + Tailwind 3 + recharts + lucide-react
 │   └── vite.config.ts  # Proxy /api → localhost:8000 in dev
@@ -316,6 +357,32 @@ All routes are prefixed with `/api/v1`. Full OpenAPI docs at `http://localhost:8
 | `GET` | `/local/process/{job_id}` | Poll local processing job |
 | `GET` | `/local/jobs` | List all local processing jobs |
 | `POST` | `/local/benchmark` | Run local vs API latency comparison |
+
+### Observability (Phase 7)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/metrics` | Prometheus metrics (text/plain) |
+| `GET` | `/observability/drift` | Confidence + topic drift report |
+| `GET` | `/observability/calibration` | ECE calibration report |
+| `POST` | `/observability/calibration/sample` | Record a calibration sample |
+| `GET` | `/review/queue` | Low-confidence extractions for human review |
+| `POST` | `/review/{id}/label` | Submit human label |
+
+### Streaming (Phase 8)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `WS` | `/ws/stream` | WebSocket: stream binary PCM audio, receive extraction results |
+
+### Search & Insights (Phase 10)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/search?q=...&risk=high&limit=20` | Full-text search across processed segments |
+| `GET` | `/search/index/stats` | Index document count |
+| `POST` | `/search/index/{video_id}` | Index all extractions for a video |
+| `GET` | `/search/insights/patterns` | Win/loss patterns + top objections |
+| `GET` | `/search/insights/velocity?period=week` | Objection velocity trends |
+| `GET` | `/search/insights/reps` | Rep comparison by risk score |
+
 ### Frontend (Phase 6)
 
 The compiled React SPA is served directly by FastAPI:
@@ -418,6 +485,9 @@ make frontend-dev            # http://localhost:3000  (proxies /api → localhos
 | `/intelligence` | **Intelligence** — bar/pie/line charts via Recharts |
 | `/finetuning` | **Fine-tuning** — training runs table, activate model button |
 | `/local` | **Local Pipeline** — model status checks, process locally, job history |
+| `/observability` | **Observability** — drift detection, calibration ECE, Prometheus integration |
+| `/search` | **Search** — full-text segment search, portfolio insights, objection velocity |
+| `/streaming` | **Live Stream** — WebSocket audio feed, real-time transcript + extraction |
 
 ---
 
