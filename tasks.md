@@ -19,6 +19,22 @@
 
 ## Active Tasks
 
+### TASK-006: Push to GitHub with README
+- **Status**: 🟢 Completed
+- **Date**: 2026-03-20
+- **Prompt/Trigger**: User: "Push the changes to https://github.com/Phani3108/TemporalOS, with a proper Readme."
+- **Work Done**:
+  - Created `README.md` with full project description, architecture diagram, quick-start guide, config table, testing instructions, project structure, and roadmap
+  - Created `.gitignore` (Python, .env, model weights, coverage artifacts, node_modules, etc.)
+  - Initialized fresh git repo in `TemporalOS/` (was previously untracked inside parent repo)
+  - Added remote `origin → https://github.com/Phani3108/TemporalOS.git`
+  - Committed all 52 files with detailed conventional commit message
+  - Pushed to `main` branch — first push to GitHub confirmed
+- **Files Changed**:
+  - `README.md` — Created
+  - `.gitignore` — Created
+- **Notes**: Repo live at https://github.com/Phani3108/TemporalOS
+
 ### TASK-005: Add Mandatory E2E Testing Rule + Phase 1 Test Suite
 - **Status**: 🟢 Completed
 - **Date**: 2026-03-20
@@ -111,3 +127,5 @@
 | TASK-002 | Detailed Plan: Scope Expansion Areas | 🟢 | 2026-03-20 |
 | TASK-003 | Detailed Scoping of Expansion Areas | 🟢 | 2026-03-20 |
 | TASK-004 | Phase 0 + Phase 1 Implementation | 🟢 | 2026-03-20 |
+| TASK-005 | Add Mandatory E2E Testing Rule + Phase 1 Test Suite | 🟢 | 2026-03-20 |
+| TASK-006 | Push to GitHub with README | 🟢 | 2026-03-20 |
