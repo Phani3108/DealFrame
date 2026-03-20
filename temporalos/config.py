@@ -55,6 +55,22 @@ class TelemetrySettings(BaseModel):
     log_level: str = "INFO"
 
 
+class FineTuningSettings(BaseModel):
+    base_model_id: str = "mistralai/Mistral-7B-Instruct-v0.3"
+    adapter_path: str = ""  # empty = no fine-tuned adapter available
+    dataset_dir: str = "/tmp/temporalos/finetuning/datasets"
+    models_dir: str = "/tmp/temporalos/finetuning/models"
+    registry_file: str = "/tmp/temporalos/finetuning/registry.json"
+    lora_r: int = 8
+    lora_alpha: int = 16
+    lora_dropout: float = 0.05
+    target_modules: list[str] = ["q_proj", "v_proj"]
+    epochs: int = 3
+    learning_rate: float = 2e-4
+    batch_size: int = 4
+    max_length: int = 1024
+
+
 class Settings(BaseSettings):
     app: AppSettings = AppSettings()
     database: DatabaseSettings = DatabaseSettings()
@@ -64,6 +80,7 @@ class Settings(BaseSettings):
     audio: AudioSettings = AudioSettings()
     extraction: ExtractionSettings = ExtractionSettings()
     telemetry: TelemetrySettings = TelemetrySettings()
+    finetuning: FineTuningSettings = FineTuningSettings()
 
     # Top-level env var overrides (most commonly set in .env)
     openai_api_key: str = ""

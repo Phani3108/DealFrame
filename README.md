@@ -8,7 +8,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com)
-[![Tests](https://img.shields.io/badge/tests-34%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-177%20passing-brightgreen.svg)](#testing)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 </div>
@@ -44,7 +44,7 @@ Video is wasted data. A sales call contains timestamped objections, decision sig
 ## Architecture
 
 ```
-Video File / Live Stream
+Video File
         │
    ┌────▼─────┐      ┌──────────────┐
    │  FFmpeg  │      │   Whisper    │
@@ -58,14 +58,28 @@ Video File / Live Stream
           │    Alignment    │   ← frame ↔ transcript fusion
           └────────┬────────┘
                    │
-          ┌────────▼────────┐
-          │   Structured    │
-          │   Extraction    │   ← GPT-4o / Claude / Qwen2.5-VL / fine-tuned
+          ┌────────▼────────┐   ┌─────────────────────┐
+          │   Extraction    │◄──│  Observatory        │ ← multi-model compare
+          │  (GPT-4o/Claude │   │  (Phase 2)          │
+          │  /Qwen / LoRA)  │   └─────────────────────┘
           └────────┬────────┘
                    │
-          ┌────────▼────────┐
-          │  FastAPI  JSON  │
-          └─────────────────┘
+     ┌─────────────┴──────────────┐
+     │                            │
+┌────▼──────────┐      ┌──────────▼──────────┐
+│ Multi-video   │      │  Fine-tuning Arc     │
+│ Intelligence  │      │  (Phase 4)           │
+│ (Phase 3)     │      │  DatasetBuilder      │
+│ Objections /  │      │  LoRATrainer         │
+│ Risk Trends   │      │  ModelRegistry       │
+└───────────────┘      └──────────────────────┘
+                                  │
+                       ┌──────────▼──────────┐
+                       │  Local SLM Pipeline  │
+                       │  (Phase 5)           │
+                       │  Zero API calls      │
+                       │  Rule-based fallback │
+                       └─────────────────────┘
 
     ════════════════════════════════
     ║     Observability Layer      ║   ← OpenTelemetry spans on every stage
@@ -92,10 +106,10 @@ This project is intentionally scoped around three deep skill areas:
 |-------|------|--------|
 | **0** | Project Scaffold | ✅ Done |
 | **1** | Walking Skeleton (FFmpeg + Whisper + GPT-4o) | ✅ Done |
-| **2** | Comparative Model Observatory (GPT-4o vs Claude vs Qwen2.5-VL) | 🔜 Next |
-| **3** | Multi-video Intelligence (portfolio analytics) | 📅 Planned |
-| **4** | Fine-tuning Arc (LoRA on Mistral-7B) | 📅 Planned |
-| **5** | Local SLM Pipeline (zero API calls) | 📅 Planned |
+| **2** | Comparative Model Observatory (GPT-4o vs Claude vs Qwen2.5-VL) | ✅ Done |
+| **3** | Multi-video Intelligence (portfolio analytics) | ✅ Done |
+| **4** | Fine-tuning Arc (LoRA dataset → training → eval → registry) | ✅ Done |
+| **5** | Local SLM Pipeline (zero API calls + rule-based fallback) | ✅ Done |
 
 ---
 
@@ -157,17 +171,17 @@ External API calls are mocked.
 ```bash
 # Unit tests (fast)
 make test
-# → 25 passed
+# → 47 passed
 
 # End-to-end tests (tests the full pipeline)
 make test-e2e
-# → 9 passed
+# → 130 passed
 
 # All tests
 make test-all
 ```
 
-**Current test status**: `34 passed, 0 failed`
+**Current test status**: `177 passed, 0 failed`
 
 ---
 
@@ -176,23 +190,27 @@ make test-all
 ```
 TemporalOS/
 ├── temporalos/
-│   ├── api/            # FastAPI app + routes
+│   ├── api/
+│   │   └── routes/     # process, observatory, intelligence, finetuning, local
 │   ├── alignment/      # Temporal frame↔transcript fusion
 │   ├── audio/          # Whisper batch transcription
 │   ├── core/           # Shared types (Frame, Word, AlignedSegment, ExtractionResult)
 │   ├── db/             # SQLAlchemy models + async session
-│   ├── extraction/     # BaseExtractionModel + adapters (GPT-4o, Claude, fine-tuned)
+│   ├── extraction/
+│   │   └── models/     # GPT-4o, Claude, FineTunedExtractionModel adapters
+│   ├── finetuning/     # DatasetBuilder, LoRATrainer, ExtractionEvaluator, ModelRegistry
 │   ├── ingestion/      # FFmpeg frame extraction
 │   ├── intelligence/   # Multi-video aggregation (Phase 3)
-│   ├── local/          # Local SLM pipeline (Phase 5)
-│   ├── observatory/    # Multi-model comparison framework (Phase 2)
+│   ├── local/          # LocalPipeline, _RuleBasedExtractor, BenchmarkRunner (Phase 5)
+│   ├── observatory/    # ObservatoryRunner + Comparator (Phase 2)
 │   ├── observability/  # OpenTelemetry telemetry singleton
-│   └── vision/         # BaseVisionModel + adapters (Phase 2)
+│   └── vision/         # BaseVisionModel + GPT-4o / Claude / Qwen2.5-VL adapters
 ├── tests/
 │   ├── conftest.py     # Shared fixtures (synthetic test video, sample data)
-│   ├── unit/           # Unit tests per module
-│   └── e2e/            # End-to-end pipeline tests (one file per phase)
-├── evals/              # DeepEval evaluation suite
+│   ├── unit/           # 47 unit tests per module
+│   └── e2e/            # 130 end-to-end tests — one file per phase
+├── evals/
+│   └── extraction_eval.py  # DeepEval metrics + schema_pass_rate()
 ├── config/
 │   └── settings.yaml   # Default configuration
 ├── claude.md           # Project rules & conventions (read this first)
@@ -212,11 +230,16 @@ All settings live in `config/settings.yaml` and can be overridden via environmen
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `OPENAI_API_KEY` | — | OpenAI API key (required for gpt4o mode) |
-| `ANTHROPIC_API_KEY` | — | Anthropic API key (Phase 2) |
+| `ANTHROPIC_API_KEY` | — | Anthropic API key (Claude adapters) |
 | `TEMPORALOS_MODE` | `api` | `api` (cloud models) or `local` (offline, Phase 5) |
 | `AUDIO__WHISPER_MODEL` | `large-v3` | Whisper model size (`base` for fast dev) |
 | `VIDEO__FRAME_INTERVAL_SECONDS` | `2` | Frame extraction frequency |
 | `DATABASE_URL` | postgres://... | PostgreSQL connection string |
+| `FINETUNING__BASE_MODEL_ID` | `mistralai/Mistral-7B-Instruct-v0.3` | HuggingFace model for LoRA training |
+| `FINETUNING__ADAPTER_PATH` | `""` | Path to fine-tuned LoRA adapter (empty = rule-based fallback) |
+| `FINETUNING__DATASET_DIR` | `/tmp/temporalos/finetuning/datasets` | Directory for training JSONL files |
+| `FINETUNING__LORA_R` | `8` | LoRA rank |
+| `FINETUNING__EPOCHS` | `3` | Training epochs |
 
 ---
 
@@ -236,23 +259,101 @@ Set `TELEMETRY__OTLP_ENDPOINT=http://localhost:4317` to send traces to any OTEL-
 
 ---
 
-## Roadmap: Expansion Beyond the Skeleton
+## API Reference
 
-### Phase 2 — Comparative Model Observatory
-Run the same video through GPT-4o Vision, Claude Sonnet Vision, and Qwen2.5-VL simultaneously. Get a benchmark report: accuracy per model, latency, cost per 1000 frames, and a disagreement heatmap showing exactly where models diverge.
+All routes are prefixed with `/api/v1`. Full OpenAPI docs at `http://localhost:8000/docs`.
 
-### Phase 3 — Multi-video Intelligence
-Portfolio-level analytics across a library of calls:
-- "What are the top 5 objections this quarter?"
-- Risk score trends over time
-- Topic frequency heatmaps
-- Competitor mention counts
+### Core Pipeline (Phase 1)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/process` | Upload video → returns `job_id` (202) |
+| `GET` | `/jobs/{job_id}` | Poll job status + result |
+| `GET` | `/health` | Health check |
 
-### Phase 4 — Full LoRA Fine-tuning Arc
-Collect annotations from Observatory outputs → fine-tune Mistral-7B-Instruct with LoRA (PEFT + Unsloth) → evaluate against GPT-4o teacher → deploy as a 1/20th cost replacement.
+### Model Observatory (Phase 2)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/observatory/compare` | Run video through all registered models (202) |
+| `GET` | `/observatory/sessions/{id}` | Poll comparison session |
+| `GET` | `/observatory/sessions` | List all comparison sessions |
 
-### Phase 5 — Local SLM Pipeline
-Complete offline pipeline: Whisper + Qwen2.5-VL + fine-tuned model. Zero API calls. Designed to run on an M-series Mac or any CUDA GPU. Full cost/accuracy benchmark vs the cloud pipeline.
+### Video Intelligence (Phase 3)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/intelligence/objections` | Top objections across all videos |
+| `GET` | `/intelligence/topics/trend` | Topic frequency trend over time |
+| `GET` | `/intelligence/risk/summary` | Risk score distribution |
+| `POST` | `/intelligence/portfolios` | Create a video portfolio |
+| `POST` | `/intelligence/portfolios/{id}/videos` | Add video to portfolio |
+
+### Fine-tuning Arc (Phase 4)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/finetuning/dataset/export` | Build training JSONL from DB extractions (202) |
+| `GET` | `/finetuning/dataset/stats` | Dataset size + class distribution |
+| `POST` | `/finetuning/train` | Launch LoRA training job (202) |
+| `GET` | `/finetuning/runs` | List training experiments |
+| `GET` | `/finetuning/runs/{id}` | Get experiment status + metrics |
+| `POST` | `/finetuning/runs/{id}/eval` | Evaluate adapter on validation set |
+| `POST` | `/finetuning/runs/{id}/activate` | Set adapter as active extraction model |
+| `GET` | `/finetuning/runs/{id}/calibration` | Get confidence calibration curve |
+| `GET` | `/finetuning/best` | Get best experiment by metric |
+
+### Local Pipeline (Phase 5)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/local/status` | Check which local models are available |
+| `POST` | `/local/process` | Process video with zero API calls (202) |
+| `GET` | `/local/process/{job_id}` | Poll local processing job |
+| `GET` | `/local/jobs` | List all local processing jobs |
+| `POST` | `/local/benchmark` | Run local vs API latency comparison |
+
+---
+
+## Fine-tuning Workflow
+
+```bash
+# Step 1 — Build training dataset from high-confidence extractions
+curl -X POST "http://localhost:8000/api/v1/finetuning/dataset/export?min_confidence=0.8"
+
+# Step 2 — Check dataset stats
+curl http://localhost:8000/api/v1/finetuning/dataset/stats
+
+# Step 3 — Launch training (dry_run=true for testing)
+curl -X POST "http://localhost:8000/api/v1/finetuning/train?name=v1&train_path=...&val_path=...&dry_run=false"
+# → {"experiment_id": "abc-123", "status": "running"}
+
+# Step 4 — Poll training progress
+curl http://localhost:8000/api/v1/finetuning/runs/abc-123
+
+# Step 5 — Activate the best adapter
+curl -X POST http://localhost:8000/api/v1/finetuning/runs/abc-123/activate
+# Sets FINETUNING__ADAPTER_PATH in settings. Future /local/process calls use this adapter.
+```
+
+---
+
+## Local Pipeline (Zero API Calls)
+
+```bash
+# Check what's available locally
+curl http://localhost:8000/api/v1/local/status
+# → {"whisper_available": true, "finetuned_adapter_available": false, "active_extractor": "rule_based", "cost_per_video_usd": 0.0}
+
+# Process a video with no external API calls
+curl -X POST http://localhost:8000/api/v1/local/process \
+  -F "file=@my_call.mp4"
+# → {"job_id": "xyz-789", "status": "pending"}
+
+# Run a cost/latency benchmark
+curl -X POST http://localhost:8000/api/v1/local/benchmark \
+  -F "file=@my_call.mp4"
+# → {"latency_ratio": 1.3, "verdict": "local_recommended", "cost_savings_usd": 0.024}
+```
+
+The local pipeline falls back gracefully:
+- **Fine-tuned adapter present** → uses `FineTunedExtractionModel` (LoRA adapter via PEFT)
+- **No adapter** → uses `_RuleBasedExtractor` (keyword matching, zero dependencies, confidence=0.4)
 
 ---
 

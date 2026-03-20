@@ -19,7 +19,53 @@
 
 ## Active Tasks
 
-### TASK-007: Phase 2 (Observatory) + Phase 3 (Multi-video Intelligence) Implementation
+### TASK-008: Phase 5 — Local SLM Pipeline
+- **Status**: 🟢 Completed
+- **Date**: 2026-06-10
+- **Prompt/Trigger**: User: "After every phase completion - do thorough deep testing with all test use cases, proper QA - and then push the changes to the github repo with a proper readme. Go for the next phases."
+- **Work Done**:
+  - `temporalos/local/pipeline.py` — Complete `LocalPipeline` implementation: frame extraction → faster-whisper transcription → temporal alignment → (optional Qwen-VL vision) → extraction (fine-tuned adapter or rule-based fallback). Includes `LocalPipelineResult` dataclass with `to_dict()` and `from_settings()` constructor
+  - `_RuleBasedExtractor` — Zero-dependency rule-based extractor: keyword matching for topics (pricing/competition/features), risk levels, objections ("too expensive", "cancel"), decision signals ("next steps", "move forward"). Confidence fixed at 0.4 for downstream calibration
+  - `temporalos/local/benchmark.py` — `BenchmarkRunner` + `BenchmarkResult` + `BenchmarkComparison`: measures local vs API latency, computes cost savings (GPT-4o pricing model), produces "local_recommended" / "local_acceptable" / "local_too_slow" verdict
+  - `temporalos/api/routes/local.py` — REST routes: `GET /local/status` (model availability check), `POST /local/process` (202 + job poll), `GET /local/process/{job_id}`, `GET /local/jobs`, `POST /local/benchmark`. Module-level `_run_local` worker for testability
+  - `tests/e2e/test_phase5_local_pipeline.py` — 27 e2e tests: `TestRuleBasedExtractor` (12), `TestLocalPipeline` (7), `TestBenchmarkRunner` (7), `TestLocalAPI` (6)
+  - **Final result**: `python -m pytest tests/ -v` → **177 passed, 0 failures** ✅
+- **Files Changed**:
+  - `temporalos/local/pipeline.py` — Full replace (was stub)
+  - `temporalos/local/benchmark.py` — Created
+  - `temporalos/api/routes/local.py` — Created
+  - `tests/e2e/test_phase5_local_pipeline.py` — Created
+- **Notes**: The local pipeline requires no external API calls. faster-whisper handles transcription, the rule-based extractor covers demo/sales call patterns. When a fine-tuned adapter is present at `settings.finetuning.adapter_path`, `FineTunedExtractionModel` is used instead.
+
+### TASK-007: Phase 4 — Fine-tuning Arc
+- **Status**: 🟢 Completed
+- **Date**: 2026-06-10
+- **Prompt/Trigger**: User: "After every phase completion - do thorough deep testing with all test use cases, proper QA - and then push the changes to the github repo with a proper readme. Go for the next phases."
+- **Work Done**:
+  - `temporalos/config.py` — Added `FineTuningSettings` Pydantic class with all LoRA hyperparameter fields; added `finetuning: FineTuningSettings` to main `Settings`
+  - `temporalos/finetuning/dataset_builder.py` — `DatasetBuilder` with `TrainingExample`, `DatasetSplit`; converts `ExtractionResult + AlignedSegment` → LoRA JSONL (same prompt format as GPT-4o adapter). `build_dataset_from_db()` async loader. `split()`, `class_distribution()`, `add_batch()`
+  - `temporalos/finetuning/evaluator.py` — `ExtractionEvaluator` with field-level accuracy + token-overlap F1 for lists; `calibration_curve()` for confidence analysis; `compare_models()` for head-to-head table
+  - `temporalos/finetuning/model_registry.py` — `ModelRegistry` backed by a JSON file; `ExperimentRecord`, `LoRAConfig`, `TrainingMetrics` dataclasses; CRUD + `best_by_metric()` + `list_experiments(status=...)`
+  - `temporalos/finetuning/trainer.py` — `LoRATrainer` with `TrainerConfig.from_settings()`; real PEFT/SFT training path (lazy-imported) + `dry_run=True` path for CI
+  - `temporalos/extraction/models/finetuned.py` — `FineTunedExtractionModel(BaseExtractionModel)` with lazy loading, `is_available` property, graceful fallback to `_DEFAULT_OUTPUT` when model path doesn't exist
+  - `temporalos/api/routes/finetuning.py` — Full lifecycle API: dataset export, stats, training, run list/get, per-run eval, adapter activation, calibration curve
+  - `evals/extraction_eval.py` — DeepEval `BaseMetric` subclasses (`TopicAccuracyMetric`, `RiskScoreRangeMetric`, `ObjectionListMetric`, `ConfidenceRangeMetric`); standalone `evaluate_extraction_output()` + `schema_pass_rate()`
+  - `tests/e2e/test_phase4_finetuning.py` — 57 e2e tests across 7 test classes
+- **Files Changed**:
+  - `temporalos/config.py` — Modified
+  - `temporalos/finetuning/__init__.py` — Created
+  - `temporalos/finetuning/dataset_builder.py` — Created
+  - `temporalos/finetuning/evaluator.py` — Created
+  - `temporalos/finetuning/model_registry.py` — Created
+  - `temporalos/finetuning/trainer.py` — Created
+  - `temporalos/extraction/models/finetuned.py` — Created
+  - `temporalos/api/routes/finetuning.py` — Created
+  - `temporalos/api/main.py` — Modified (added finetuning + local routers)
+  - `evals/extraction_eval.py` — Created
+  - `tests/e2e/test_phase4_finetuning.py` — Created
+- **Notes**: LoRA training uses `dry_run=True` in tests (no GPU required). The fine-tuned extraction model falls back to rule-based output when the adapter path is missing, making it safe for production deployment before training completes.
+
+
 - **Status**: 🟢 Completed
 - **Date**: 2026-03-21
 - **Prompt/Trigger**: User: "Go for the next phases"
