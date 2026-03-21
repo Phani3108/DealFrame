@@ -1,7 +1,7 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload as UploadIcon, FileVideo, CheckCircle2, XCircle, Loader2, X, Clapperboard, Zap, Cloud } from 'lucide-react'
-import { processVideo, processLocally, getJob, getLocalJob } from '../api/client'
+import { processVideo, processLocally, getJob, getLocalJob, listSchemas } from '../api/client'
 
 type Mode = 'api' | 'local'
 type StageStatus = 'idle' | 'active' | 'done' | 'error'
@@ -32,6 +32,9 @@ export function Upload() {
   const [file, setFile] = useState<File | null>(null)
   const [mode, setMode] = useState<Mode>('api')
   const [useVision, setUseVision] = useState(false)
+  const [vertical, setVertical] = useState('')
+  const [schemaId, setSchemaId] = useState('')
+  const [schemas, setSchemas] = useState<Array<{ schema_id: string; name: string }>>([])
   const [stages, setStages] = useState<Stage[]>(
     PIPELINE_STAGES.map(name => ({ name, status: 'idle' })),
   )
@@ -39,6 +42,10 @@ export function Upload() {
   const [runStatus, setRunStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    listSchemas().then(d => setSchemas(d.schemas ?? [])).catch(() => {})
+  }, [])
 
   const handleFile = (f: File) => {
     const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
@@ -234,12 +241,45 @@ export function Upload() {
           </div>
 
           {runStatus === 'idle' && (
-            <button
-              onClick={handleSubmit}
-              className="mt-6 w-full btn-primary py-3.5 text-base font-bold shadow-md shadow-indigo-100"
-            >
-              Start Processing
-            </button>
+            <>
+              {/* Vertical + Schema selectors */}
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Vertical</label>
+                  <select
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white"
+                    value={vertical}
+                    onChange={e => setVertical(e.target.value)}
+                  >
+                    <option value="">— Default —</option>
+                    <option value="sales">Sales</option>
+                    <option value="ux_research">UX Research</option>
+                    <option value="customer_success">Customer Success</option>
+                    <option value="real_estate">Real Estate</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Schema</label>
+                  <select
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white"
+                    value={schemaId}
+                    onChange={e => setSchemaId(e.target.value)}
+                  >
+                    <option value="">— Default —</option>
+                    {schemas.map(s => (
+                      <option key={s.schema_id} value={s.schema_id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={handleSubmit}
+                className="mt-6 w-full btn-primary py-3.5 text-base font-bold shadow-md shadow-indigo-100"
+              >
+                Start Processing
+              </button>
+            </>
           )}
         </>
       )}

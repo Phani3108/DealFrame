@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { FileVideo, AlertTriangle, Cpu, DollarSign, ArrowRight, RefreshCw, TrendingUp, Zap } from 'lucide-react'
+import { FileVideo, AlertTriangle, Cpu, DollarSign, ArrowRight, RefreshCw, TrendingUp, Zap, ShieldAlert } from 'lucide-react'
 import { StatCard } from '../components/StatCard'
 import { Badge } from '../components/Badge'
 import {
@@ -8,6 +8,7 @@ import {
   getObjections,
   getRiskSummary,
   getLocalStatus,
+  getRiskAlerts,
   type Job,
   type Objection,
   type RiskSummary,
@@ -19,6 +20,7 @@ export function Dashboard() {
   const [objections, setObjections] = useState<Objection[]>([])
   const [riskSummary, setRiskSummary] = useState<RiskSummary | null>(null)
   const [localStatus, setLocalStatus] = useState<LocalStatus | null>(null)
+  const [riskAlerts, setRiskAlerts] = useState<Array<{ job_id: string; alert_type: string; risk_score: number; company: string; message: string }>>([])
   const [loading, setLoading] = useState(true)
 
   const load = () => {
@@ -34,6 +36,7 @@ export function Dashboard() {
       getObjections(5).then(r => setObjections(r.objections ?? [])).catch(() => {}),
       getRiskSummary().then(setRiskSummary).catch(() => {}),
       getLocalStatus().then(setLocalStatus).catch(() => {}),
+      getRiskAlerts().then(r => setRiskAlerts(r.alerts ?? [])).catch(() => {}),
     ]).finally(() => setLoading(false))
   }
 
@@ -173,42 +176,82 @@ export function Dashboard() {
           )}
         </div>
 
-        {/* Top objections */}
-        <div className="card overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-slate-900">Top Objections</h2>
-            <Link to="/intelligence" className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold">
-              View all
-            </Link>
-          </div>
-          {objections.length === 0 ? (
-            <div className="px-5 py-12 text-center">
-              <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                <TrendingUp className="w-6 h-6 text-slate-300" />
+        {/* Right column: risk alerts + objections */}
+        <div className="space-y-6">
+          {/* Risk Alert Widget */}
+          <div className="card overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                <ShieldAlert className="w-4 h-4 text-red-400" />
+                Risk Alerts
+              </h2>
+              <Link to="/chat" className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold">
+                Investigate
+              </Link>
+            </div>
+            {riskAlerts.length === 0 ? (
+              <div className="px-5 py-8 text-center">
+                <p className="text-sm text-slate-400">No active risk alerts</p>
               </div>
-              <p className="text-sm font-semibold text-slate-400">No data yet</p>
-              <p className="text-xs text-slate-300 mt-1">Process videos to see patterns</p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {riskAlerts.slice(0, 3).map((a, i) => (
+                  <div key={i} className="px-5 py-3">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-semibold text-slate-700">{a.company || a.job_id.slice(0, 12)}</span>
+                      <span className={`text-xs font-bold ${a.risk_score > 0.7 ? 'text-red-600' : 'text-amber-500'}`}>
+                        {(a.risk_score * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 truncate">{a.message}</p>
+                  </div>
+                ))}
+                {riskAlerts.length > 3 && (
+                  <div className="px-5 py-2.5">
+                    <p className="text-xs text-slate-400">+{riskAlerts.length - 3} more alerts</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Top objections */}
+          <div className="card overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-900">Top Objections</h2>
+              <Link to="/intelligence" className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold">
+                View all
+              </Link>
             </div>
-          ) : (
-            <div className="p-5 space-y-4">
-              {objections.map((obj, i) => (
-                <div key={i}>
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="text-slate-700 truncate pr-3 font-semibold">{obj.text}</span>
-                    <span className="text-slate-400 flex-shrink-0 tabular-nums font-bold">×{obj.count}</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-indigo-400 to-indigo-600 rounded-full transition-all"
-                      style={{
-                        width: `${Math.min(100, (obj.count / (objections[0]?.count || 1)) * 100)}%`,
-                      }}
-                    />
-                  </div>
+            {objections.length === 0 ? (
+              <div className="px-5 py-12 text-center">
+                <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <TrendingUp className="w-6 h-6 text-slate-300" />
                 </div>
-              ))}
-            </div>
-          )}
+                <p className="text-sm font-semibold text-slate-400">No data yet</p>
+                <p className="text-xs text-slate-300 mt-1">Process videos to see patterns</p>
+              </div>
+            ) : (
+              <div className="p-5 space-y-4">
+                {objections.map((obj, i) => (
+                  <div key={i}>
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="text-slate-700 truncate pr-3 font-semibold">{obj.text}</span>
+                      <span className="text-slate-400 flex-shrink-0 tabular-nums font-bold">×{obj.count}</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-indigo-400 to-indigo-600 rounded-full transition-all"
+                        style={{
+                          width: `${Math.min(100, (obj.count / (objections[0]?.count || 1)) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

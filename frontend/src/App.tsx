@@ -10,6 +10,13 @@ import { LocalPipeline } from './pages/LocalPipeline'
 import { Observability } from './pages/Observability'
 import { Search } from './pages/Search'
 import { Streaming } from './pages/Streaming'
+import { Chat } from './pages/Chat'
+import { Coaching } from './pages/Coaching'
+import { SchemaBuilder } from './pages/SchemaBuilder'
+import { Integrations } from './pages/Integrations'
+import { Batch } from './pages/Batch'
+import { MeetingPrep } from './pages/MeetingPrep'
+import { KnowledgeGraph } from './pages/KnowledgeGraph'
 
 // Lazy-load Recharts-heavy Intelligence page to avoid headless/SSR crashes
 const Intelligence = lazy(() => import('./pages/Intelligence').then(m => ({ default: m.Intelligence })))
@@ -33,6 +40,13 @@ export default function App() {
           <Route path="/observability" element={<Observability />} />
           <Route path="/search" element={<Search />} />
           <Route path="/streaming" element={<Streaming />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/coaching" element={<Coaching />} />
+          <Route path="/schema-builder" element={<SchemaBuilder />} />
+          <Route path="/integrations" element={<Integrations />} />
+          <Route path="/batch" element={<Batch />} />
+          <Route path="/meeting-prep" element={<MeetingPrep />} />
+          <Route path="/knowledge-graph" element={<KnowledgeGraph />} />
         </Routes>
       </Layout>
     </BrowserRouter>

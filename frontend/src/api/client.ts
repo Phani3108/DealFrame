@@ -325,3 +325,162 @@ export const getObjectionVelocity = (period: 'week' | 'month' = 'week') =>
       counts_by_period: Array<{ period: string; count: number }>
     }>
   }>(`/search/insights/velocity?period=${period}`)
+
+// ─── Summaries ───────────────────────────────────────────────────────────────
+export const getSummary = (jobId: string, type = 'executive') =>
+  request<{ job_id: string; summary_type: string; content: string; word_count: number }>(
+    `/summaries/${jobId}?type=${type}`,
+  )
+
+export const createSummary = (jobId: string, type = 'executive') =>
+  request<{ job_id: string; summary_type: string; content: string; word_count: number }>(
+    `/summaries/${jobId}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ summary_type: type }) },
+  )
+
+// ─── Diarization ─────────────────────────────────────────────────────────────
+export const getSpeakers = (jobId: string) =>
+  request<{ job_id: string; speakers: Array<{ speaker: string; turns: number; words: number; percentage: number }> }>(
+    `/diarization/${jobId}/speakers`,
+  )
+
+export const getDiarizationSegments = (jobId: string) =>
+  request<{ job_id: string; segments: Array<{ speaker: string; start_ms: number; end_ms: number; text: string }> }>(
+    `/diarization/${jobId}/segments`,
+  )
+
+// ─── Clips ───────────────────────────────────────────────────────────────────
+export const listClips = (jobId: string) =>
+  request<{ job_id: string; clips: Array<{ filename: string; segment_index: number; url: string }> }>(
+    `/clips/${jobId}`,
+  )
+
+export const extractSignificantClips = (jobId: string, n = 3) =>
+  request<{ job_id: string; clips: unknown[] }>(`/clips/${jobId}/significant?n=${n}`, { method: 'POST' })
+
+// ─── Agents: Q&A ─────────────────────────────────────────────────────────────
+export interface QAAnswer {
+  question: string
+  answer: string
+  model: string
+  citations: Array<{ job_id: string; segment_index: number; timestamp: string; topic: string; risk_score: number; excerpt: string }>
+}
+
+export const askQA = (question: string, jobId?: string) => {
+  const params = new URLSearchParams({ question })
+  if (jobId) params.set('job_id', jobId)
+  return request<{ answer: QAAnswer }>(`/agents/qa?${params}`)
+}
+
+export const indexJobForQA = (jobId: string) =>
+  request<{ message: string; doc_count: number }>(`/agents/qa/index/${jobId}`, { method: 'POST' })
+
+// ─── Agents: Risk ─────────────────────────────────────────────────────────────
+export const getRiskAlerts = () =>
+  request<{ alerts: Array<{ job_id: string; alert_type: string; risk_score: number; company: string; message: string }> }>(
+    '/agents/risk/alerts',
+  )
+
+export const recordRisk = (jobId: string, company: string, dealId?: string) =>
+  request<{ alerts: unknown[] }>(
+    `/agents/risk/record/${jobId}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, deal_id: dealId }) },
+  )
+
+// ─── Agents: Coaching ────────────────────────────────────────────────────────
+export interface CoachingCard {
+  rep_id: string
+  calls_analyzed: number
+  overall_score: number
+  grade: string
+  dimensions: Array<{ name: string; score: number; value: number; benchmark: number; verdict: string; tip: string }>
+  strengths: string[]
+  improvements: string[]
+}
+
+export const getCoachingCard = (repId: string) =>
+  request<{ card: CoachingCard }>(`/agents/coaching/${repId}`)
+
+export const recordCallForCoaching = (jobId: string, repId: string, speakerLabel?: string) =>
+  request<{ message: string }>(
+    `/agents/coaching/record/${jobId}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rep_id: repId, speaker_label: speakerLabel }) },
+  )
+
+// ─── Agents: Meeting Prep ────────────────────────────────────────────────────
+export const getMeetingBrief = (company: string, contact?: string) =>
+  request<{ brief: unknown }>(
+    '/agents/meeting-prep',
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, contact }) },
+  )
+
+// ─── Agents: Knowledge Graph ─────────────────────────────────────────────────
+export const queryKG = (entity: string, limit = 20) =>
+  request<{ nodes: unknown[]; edges: unknown[] }>(`/agents/kg?entity=${encodeURIComponent(entity)}&limit=${limit}`)
+
+export const getTopEntities = (entityType?: string, limit = 20) => {
+  const params = new URLSearchParams({ limit: String(limit) })
+  if (entityType) params.set('entity_type', entityType)
+  return request<{ entities: unknown[] }>(`/agents/kg/top?${params}`)
+}
+
+export const exportKG = () =>
+  request<{ nodes: unknown[]; edges: unknown[] }>('/agents/kg/export')
+
+// ─── Webhooks ────────────────────────────────────────────────────────────────
+export const listWebhooks = () =>
+  request<{ webhooks: Array<{ id: string; url: string; events: string[]; active: boolean }> }>('/webhooks')
+
+export const createWebhook = (url: string, events: string[], secret?: string) =>
+  request<{ webhook: unknown }>(
+    '/webhooks',
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, events, secret }) },
+  )
+
+export const deleteWebhook = (webhookId: string) =>
+  request<{ message: string }>(`/webhooks/${webhookId}`, { method: 'DELETE' })
+
+// ─── Schemas ─────────────────────────────────────────────────────────────────
+export const listSchemas = () =>
+  request<{ schemas: Array<{ schema_id: string; name: string; vertical: string }> }>('/schemas')
+
+export const createSchema = (name: string, fields: unknown[], vertical?: string) =>
+  request<{ schema: unknown }>(
+    '/schemas',
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, fields, vertical }) },
+  )
+
+// ─── Batch ───────────────────────────────────────────────────────────────────
+export const submitBatch = (urls: string[], vertical?: string, schemaId?: string, priority = 5) =>
+  request<{ batch: unknown }>(
+    '/batch',
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ urls, vertical, schema_id: schemaId, priority }) },
+  )
+
+export const getBatch = (batchId: string) =>
+  request<{ batch: unknown }>(`/batch/${batchId}`)
+
+export const listBatches = (limit = 20) =>
+  request<{ batches: unknown[] }>(`/batch?limit=${limit}`)
+
+// ─── Integrations ────────────────────────────────────────────────────────────
+export const getIntegrationStatus = () =>
+  request<Record<string, { configured: boolean }>>('/integrations/status')
+
+export const syncToSalesforce = (jobId: string, payload: { access_token: string; instance_url: string; who_id?: string; what_id?: string }) =>
+  request<{ message: string; task_id: string }>(
+    `/integrations/salesforce/sync/${jobId}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) },
+  )
+
+export const syncToHubspot = (jobId: string, payload: { access_token: string; contact_ids?: string[]; deal_ids?: string[] }) =>
+  request<{ message: string; engagement_id: string }>(
+    `/integrations/hubspot/sync/${jobId}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) },
+  )
+
+export const exportToNotion = (jobId: string, payload: { token: string; database_id: string }) =>
+  request<{ message: string; page_id: string; url: string }>(
+    `/integrations/notion/export/${jobId}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) },
+  )

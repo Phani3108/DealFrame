@@ -1,504 +1,116 @@
-<div align="center">
+# TemporalOS — Video → Decision Intelligence
 
-# TemporalOS
+> Turn any recorded call, demo, or meeting into structured, machine-readable intelligence — instantly.
 
-**Video → Structured Decision Intelligence Engine**
-
-*Convert sales calls, demos, and walkthroughs into machine-queryable intelligence*
-
-[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com)
-[![Tests](https://img.shields.io/badge/tests-327%20passing-brightgreen.svg)](#testing)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-
-</div>
+[![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green?logo=fastapi)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18-61dafb?logo=react)](https://react.dev)
+[![Tests](https://img.shields.io/badge/Tests-327%20passing-brightgreen)](#)
 
 ---
 
-## What is TemporalOS?
+## What it does
 
-Video is wasted data. A sales call contains timestamped objections, decision signals, pricing reactions, and competitive mentions — all buried in an unstructured mp4. TemporalOS extracts it into a structured, queryable intelligence graph.
-
-**Input**: a sales call video  
-**Output**:
-```json
-{
-  "segments": [
-    {
-      "timestamp": "12:32",
-      "topic": "pricing",
-      "customer_sentiment": "hesitant",
-      "risk": "high",
-      "risk_score": 0.75,
-      "objections": ["The price seems high compared to competitors"],
-      "decision_signals": ["Can you send a proposal?"],
-      "model": "gpt4o"
-    }
-  ],
-  "overall_risk_score": 0.67
-}
-```
+Upload a video → get back topics, sentiment, risk scores, objections, decision signals, speaker breakdown, and AI-generated summaries. All in one pipeline.
 
 ---
 
-## Architecture
+## Screenshots
 
-```
-Video File
-        │
-   ┌────▼─────┐      ┌──────────────┐
-   │  FFmpeg  │      │   Whisper    │
-   │  Frames  │      │  Transcript  │
-   └────┬─────┘      └──────┬───────┘
-        │                   │
-        └──────────┬─────────┘
-                   │
-          ┌────────▼────────┐
-          │    Temporal     │
-          │    Alignment    │   ← frame ↔ transcript fusion
-          └────────┬────────┘
-                   │
-          ┌────────▼────────┐   ┌─────────────────────┐
-          │   Extraction    │◄──│  Observatory        │ ← multi-model compare
-          │  (GPT-4o/Claude │   │  (Phase 2)          │
-          │  /Qwen / LoRA)  │   └─────────────────────┘
-          └────────┬────────┘
-                   │
-     ┌─────────────┴──────────────┐
-     │                            │
-┌────▼──────────┐      ┌──────────▼──────────┐
-│ Multi-video   │      │  Fine-tuning Arc     │
-│ Intelligence  │      │  (Phase 4)           │
-│ (Phase 3)     │      │  DatasetBuilder      │
-│ Objections /  │      │  LoRATrainer         │
-│ Risk Trends   │      │  ModelRegistry       │
-└───────────────┘      └──────────────────────┘
-                                  │
-                       ┌──────────▼──────────┐
-                       │  Local SLM Pipeline  │
-                       │  (Phase 5)           │
-                       │  Zero API calls      │
-                       │  Rule-based fallback │
-                       └─────────────────────┘
-
-    ════════════════════════════════
-    ║     Observability Layer      ║   ← OpenTelemetry spans on every stage
-    ════════════════════════════════
-```
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/dashboard.png" width="400"/><br/><sub><b>Dashboard</b></sub></td>
+    <td align="center"><img src="docs/screenshots/upload.png" width="400"/><br/><sub><b>Upload &amp; Process</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/search.png" width="400"/><br/><sub><b>Semantic Search</b></sub></td>
+    <td align="center"><img src="docs/screenshots/chat.png" width="400"/><br/><sub><b>Ask Your Library (Q&amp;A)</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/coaching.png" width="400"/><br/><sub><b>Rep Coaching Dashboard</b></sub></td>
+    <td align="center"><img src="docs/screenshots/meeting-prep.png" width="400"/><br/><sub><b>Meeting Prep Brief</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/knowledge-graph.png" width="400"/><br/><sub><b>Knowledge Graph</b></sub></td>
+    <td align="center"><img src="docs/screenshots/integrations.png" width="400"/><br/><sub><b>Integrations</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/schema-builder.png" width="400"/><br/><sub><b>Schema Builder</b></sub></td>
+    <td align="center"><img src="docs/screenshots/batch.png" width="400"/><br/><sub><b>Batch Processing</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2"><img src="docs/screenshots/observability.png" width="400"/><br/><sub><b>Observability &amp; Drift Detection</b></sub></td>
+  </tr>
+</table>
 
 ---
 
-## Core Learning Goals
+## Key Features
 
-This project is intentionally scoped around three deep skill areas:
-
-| Goal | What We Build |
-|------|--------------|
-| **Monitoring & Observability** | OpenTelemetry on every pipeline stage, accuracy tracking, drift detection |
-| **Real-time Multimodal** | Streaming ASR + live frame capture + incremental extraction |
-| **Fine-tuning** | Full LoRA arc: dataset collection → training → eval → deploy |
-
----
-
-## Project Phases
-
-| Phase | Name | Status |
-|-------|------|--------|
-| **0** | Project Scaffold | ✅ Done |
-| **1** | Walking Skeleton (FFmpeg + Whisper + GPT-4o) | ✅ Done |
-| **2** | Comparative Model Observatory (GPT-4o vs Claude vs Qwen2.5-VL) | ✅ Done |
-| **3** | Multi-video Intelligence (portfolio analytics) | ✅ Done |
-| **4** | Fine-tuning Arc (LoRA dataset → training → eval → registry) | ✅ Done |
-| **5** | Local SLM Pipeline (zero API calls + rule-based fallback) | ✅ Done |
-| **6** | Frontend Dashboard (React + Vite + Tailwind SPA) | ✅ Done |
-| **7** | Observability & Drift Detection (Prometheus + ECE + review queue) | ✅ Done |
-| **8** | Streaming Pipeline (WebSocket ASR + real-time extraction) | ✅ Done |
-| **9** | Scene Intelligence & Vision Pipeline (OCR + slide classification) | ✅ Done |
-| **10** | Search & Portfolio Insights (TF-IDF + objection velocity) | ✅ Done |
-
----
-
-## Frontend Screenshots
-
-<div align="center">
-
-### Dashboard
-![Dashboard](docs/screenshots/dashboard.png)
-
-### Upload & Process
-![Upload](docs/screenshots/upload.png)
-
-### Observatory (Multi-model comparison)
-![Observatory](docs/screenshots/observatory.png)
-
-### Analytics
-![Intelligence](docs/screenshots/intelligence.png)
-
-### Fine-tuning
-![Fine-tuning](docs/screenshots/finetuning.png)
-
-### Local Pipeline
-![Local Pipeline](docs/screenshots/local_pipeline.png)
-
-### Observability (Drift Detection + Calibration)
-![Observability](docs/screenshots/observability.png)
-
-### Search
-![Search](docs/screenshots/search.png)
-
-### Live Streaming
-![Streaming](docs/screenshots/streaming.png)
-
-</div>
+- **Video pipeline** — FFmpeg frame extraction + Whisper/Deepgram transcription + temporal alignment
+- **Structured extraction** — Topics, sentiment, risk scores, objections, decision signals per segment
+- **Speaker diarization** — Who said what and talk-time breakdown
+- **Auto summaries** — Executive brief, action items, deal brief, QBR, UX research report
+- **Clip extraction** — Pull the most significant moments as standalone clips
+- **Verticals** — Pre-built packs for Sales, UX Research, Customer Success, Real Estate
+- **Custom schemas** — Build your own extraction schema with a drag-and-drop UI
+- **Q&A over your library** — Ask natural language questions across all processed calls
+- **Deal risk monitoring** — Real-time alerts when risk spikes or persists high
+- **Rep coaching** — Per-rep scorecards across 5 dimensions with an overall grade
+- **Meeting prep** — Auto-generated brief from historical call intelligence before you dial
+- **Knowledge graph** — Entity co-occurrence network across your entire video library
+- **Integrations** — Zoom, Google Meet, Teams, Slack, Notion, Salesforce, HubSpot, Zapier
+- **Batch processing** — Async priority queue to process hundreds of URLs in parallel
+- **Python SDK** — Zero-dependency stdlib-only client, fully typed
+- **Observability** — OpenTelemetry traces, Prometheus metrics, model drift detection
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.11+
-- [FFmpeg](https://ffmpeg.org/download.html) (`brew install ffmpeg` on macOS)
-- PostgreSQL (via Docker — included)
-- OpenAI API key (for Phase 1/2 extraction)
-
-### Setup
-
 ```bash
-# Clone
+# 1. Clone
 git clone https://github.com/Phani3108/TemporalOS.git
 cd TemporalOS
 
-# Environment
-cp .env.example .env
-# Edit .env — set OPENAI_API_KEY, optionally set AUDIO__WHISPER_MODEL=base for fast dev
+# 2. Backend
+pip install -e ".[dev]"
+DATABASE_URL="sqlite+aiosqlite:///./dev.db" uvicorn temporalos.api.main:app --port 8000 --reload
 
-# Install
-pip install -e ".[audio,dev]"
+# 3. Frontend (new terminal)
+cd frontend && npm install && npm run dev
 
-# Start Postgres
-make db-up
-
-# Start API
-make dev
-# → http://localhost:8000
-# → http://localhost:8000/docs
+# 4. Open http://localhost:5173
 ```
 
-### Process a video
+---
+
+## Stack
+
+| Layer | Tech |
+|---|---|
+| Video | FFmpeg, OpenCV, PySceneDetect |
+| ASR | Whisper (local), Deepgram (streaming) |
+| Vision | GPT-4o / Claude Vision / Qwen-VL |
+| API | FastAPI, SQLAlchemy, aiosqlite |
+| Frontend | React 18, Vite, TailwindCSS |
+| Observability | OpenTelemetry, Prometheus |
+| Fine-tuning | LoRA via HuggingFace PEFT |
+
+---
+
+## Tests
 
 ```bash
-# Via Makefile
-make process VIDEO=my_call.mp4
-
-# Or directly
-curl -X POST http://localhost:8000/api/v1/process \
-  -F "file=@my_call.mp4"
-# → {"job_id": "abc-123", "status": "pending"}
-
-curl http://localhost:8000/api/v1/jobs/abc-123
-# → {"status": "completed", "result": {...}}
+make test        # unit tests
+make test-e2e    # end-to-end suite
 ```
 
 ---
 
-## Testing
+## Built by
 
-End-to-end tests are **mandatory** after every phase (see [claude.md](claude.md) §0).  
-Tests generate synthetic videos via FFmpeg — no external assets required.  
-External API calls are mocked.
+**Phani Marupaka**  
+[LinkedIn](https://linkedin.com/in/phani-marupaka) · [Portfolio](https://phanimarupaka.netlify.app)
 
-```bash
-# Unit tests (fast)
-make test
-# → 47 passed
-
-# End-to-end tests (tests the full pipeline)
-make test-e2e
-# → 161+ passed
-
-# All tests
-make test-all
-```
-
-**Current test status**: `327 passed, 0 failed`
-
----
-
-## Project Structure
-
-```
-TemporalOS/
-├── temporalos/
-│   ├── api/
-│   │   └── routes/     # process, observatory, intelligence, finetuning, local, metrics, search, stream
-│   ├── alignment/      # Temporal frame↔transcript fusion
-│   ├── audio/          # Whisper batch transcription + MockStreamingASR (Phase 8)
-│   ├── core/           # Shared types (Frame, Word, AlignedSegment, ExtractionResult)
-│   ├── db/             # SQLAlchemy models + async session
-│   ├── extraction/
-│   │   └── models/     # GPT-4o, Claude, FineTunedExtractionModel adapters
-│   ├── finetuning/     # DatasetBuilder, LoRATrainer, ExtractionEvaluator, ModelRegistry
-│   ├── ingestion/      # FFmpeg frame extraction + SceneDetector + KeyframeSelector (Phase 9)
-│   ├── intelligence/   # Multi-video aggregation (Phase 3) + PortfolioInsights (Phase 10)
-│   ├── local/          # LocalPipeline, _RuleBasedExtractor, BenchmarkRunner (Phase 5)
-│   ├── observatory/    # ObservatoryRunner + Comparator (Phase 2)
-│   ├── observability/  # OTel telemetry + PipelineMetrics + DriftDetector + ConfidenceCalibrator
-│   ├── pipeline/       # StreamingPipeline async generator (Phase 8)
-│   ├── search/         # TF-IDF SearchIndex + SearchEngine (Phase 10)
-│   └── vision/         # BaseVisionModel + OcrEngine + SlideClassifier + VisionPipeline (Phase 9)
-├── tests/
-│   ├── conftest.py     # Shared fixtures (synthetic test video, sample data)
-│   ├── unit/           # 47 unit tests per module
-│   └── e2e/            # 280 end-to-end tests — one file per phase
-├── evals/
-│   └── extraction_eval.py  # DeepEval metrics + schema_pass_rate()
-├── config/
-│   └── settings.yaml   # Default configuration
-├── claude.md           # Project rules & conventions (read this first)
-├── planning.md         # Architecture, decisions, phased roadmap
-├── frontend/
-│   ├── src/
-│   │   ├── api/        # Typed API client (all 5 route groups)
-│   │   ├── components/ # Layout, StatCard, Badge, SegmentCard
-│   │   └── pages/      # Dashboard, Upload, Results, Observatory, Intelligence, Finetuning, LocalPipeline, Observability, Search, Streaming
-│   ├── dist/           # Built SPA (served by FastAPI at /)
-│   ├── package.json    # React 18 + Vite 5 + Tailwind 3 + recharts + lucide-react
-│   └── vite.config.ts  # Proxy /api → localhost:8000 in dev
-├── tasks.md            # Complete task audit log
-├── Makefile            # dev / test / test-e2e / process / db-up / frontend-*
-├── docker-compose.yml  # PostgreSQL service
-└── pyproject.toml      # Dependencies (core, audio, vision, finetuning, dev)
-```
-
----
-
-## Configuration
-
-All settings live in `config/settings.yaml` and can be overridden via environment variables:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENAI_API_KEY` | — | OpenAI API key (required for gpt4o mode) |
-| `ANTHROPIC_API_KEY` | — | Anthropic API key (Claude adapters) |
-| `TEMPORALOS_MODE` | `api` | `api` (cloud models) or `local` (offline, Phase 5) |
-| `AUDIO__WHISPER_MODEL` | `large-v3` | Whisper model size (`base` for fast dev) |
-| `VIDEO__FRAME_INTERVAL_SECONDS` | `2` | Frame extraction frequency |
-| `DATABASE_URL` | postgres://... | PostgreSQL connection string |
-| `FINETUNING__BASE_MODEL_ID` | `mistralai/Mistral-7B-Instruct-v0.3` | HuggingFace model for LoRA training |
-| `FINETUNING__ADAPTER_PATH` | `""` | Path to fine-tuned LoRA adapter (empty = rule-based fallback) |
-| `FINETUNING__DATASET_DIR` | `/tmp/temporalos/finetuning/datasets` | Directory for training JSONL files |
-| `FINETUNING__LORA_R` | `8` | LoRA rank |
-| `FINETUNING__EPOCHS` | `3` | Training epochs |
-
----
-
-## Observability
-
-Every pipeline stage emits OpenTelemetry spans:
-
-```
-pipeline.run
-  ├── ingestion.extract_frames    (duration, frame_count)
-  ├── audio.transcribe            (duration, word_count, model)
-  ├── alignment.align             (frame_count, non_empty_segments)
-  └── extraction.gpt4o            (duration, latency_ms, timestamp_ms)
-```
-
-Set `TELEMETRY__OTLP_ENDPOINT=http://localhost:4317` to send traces to any OTEL-compatible backend (Jaeger, Grafana Tempo, etc.). Defaults to console output in development.
-
----
-
-## API Reference
-
-All routes are prefixed with `/api/v1`. Full OpenAPI docs at `http://localhost:8000/docs`.
-
-### Core Pipeline (Phase 1)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/process` | Upload video → returns `job_id` (202) |
-| `GET` | `/jobs/{job_id}` | Poll job status + result |
-| `GET` | `/health` | Health check |
-
-### Model Observatory (Phase 2)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/observatory/compare` | Run video through all registered models (202) |
-| `GET` | `/observatory/sessions/{id}` | Poll comparison session |
-| `GET` | `/observatory/sessions` | List all comparison sessions |
-
-### Video Intelligence (Phase 3)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/intelligence/objections` | Top objections across all videos |
-| `GET` | `/intelligence/topics/trend` | Topic frequency trend over time |
-| `GET` | `/intelligence/risk/summary` | Risk score distribution |
-| `POST` | `/intelligence/portfolios` | Create a video portfolio |
-| `POST` | `/intelligence/portfolios/{id}/videos` | Add video to portfolio |
-
-### Fine-tuning Arc (Phase 4)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/finetuning/dataset/export` | Build training JSONL from DB extractions (202) |
-| `GET` | `/finetuning/dataset/stats` | Dataset size + class distribution |
-| `POST` | `/finetuning/train` | Launch LoRA training job (202) |
-| `GET` | `/finetuning/runs` | List training experiments |
-| `GET` | `/finetuning/runs/{id}` | Get experiment status + metrics |
-| `POST` | `/finetuning/runs/{id}/eval` | Evaluate adapter on validation set |
-| `POST` | `/finetuning/runs/{id}/activate` | Set adapter as active extraction model |
-| `GET` | `/finetuning/runs/{id}/calibration` | Get confidence calibration curve |
-| `GET` | `/finetuning/best` | Get best experiment by metric |
-
-### Local Pipeline (Phase 5)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/local/status` | Check which local models are available |
-| `POST` | `/local/process` | Process video with zero API calls (202) |
-| `GET` | `/local/process/{job_id}` | Poll local processing job |
-| `GET` | `/local/jobs` | List all local processing jobs |
-| `POST` | `/local/benchmark` | Run local vs API latency comparison |
-
-### Observability (Phase 7)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/metrics` | Prometheus metrics (text/plain) |
-| `GET` | `/observability/drift` | Confidence + topic drift report |
-| `GET` | `/observability/calibration` | ECE calibration report |
-| `POST` | `/observability/calibration/sample` | Record a calibration sample |
-| `GET` | `/review/queue` | Low-confidence extractions for human review |
-| `POST` | `/review/{id}/label` | Submit human label |
-
-### Streaming (Phase 8)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `WS` | `/ws/stream` | WebSocket: stream binary PCM audio, receive extraction results |
-
-### Search & Insights (Phase 10)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/search?q=...&risk=high&limit=20` | Full-text search across processed segments |
-| `GET` | `/search/index/stats` | Index document count |
-| `POST` | `/search/index/{video_id}` | Index all extractions for a video |
-| `GET` | `/search/insights/patterns` | Win/loss patterns + top objections |
-| `GET` | `/search/insights/velocity?period=week` | Objection velocity trends |
-| `GET` | `/search/insights/reps` | Rep comparison by risk score |
-
-### Frontend (Phase 6)
-
-The compiled React SPA is served directly by FastAPI:
-
-| Path | Description |
-|------|-------------|
-| `/` | Dashboard — stat cards, recent jobs, top objections |
-| `/upload` | Upload & Process — drag-drop, stage tracker, mode selector |
-| `/results/:jobId` | Analysis results — segment cards with risk-colored borders |
-| `/observatory` | Multi-model comparison sessions |
-| `/intelligence` | Cross-video analytics with Recharts charts |
-| `/finetuning` | LoRA training lifecycle — runs table, activate model |
-| `/local` | Local pipeline — model status, process locally |
-| `/assets/*` | Static CSS/JS bundles (Vite build output) |
----
-
-## Fine-tuning Workflow
-
-```bash
-# Step 1 — Build training dataset from high-confidence extractions
-curl -X POST "http://localhost:8000/api/v1/finetuning/dataset/export?min_confidence=0.8"
-
-# Step 2 — Check dataset stats
-curl http://localhost:8000/api/v1/finetuning/dataset/stats
-
-# Step 3 — Launch training (dry_run=true for testing)
-curl -X POST "http://localhost:8000/api/v1/finetuning/train?name=v1&train_path=...&val_path=...&dry_run=false"
-# → {"experiment_id": "abc-123", "status": "running"}
-
-# Step 4 — Poll training progress
-curl http://localhost:8000/api/v1/finetuning/runs/abc-123
-
-# Step 5 — Activate the best adapter
-curl -X POST http://localhost:8000/api/v1/finetuning/runs/abc-123/activate
-# Sets FINETUNING__ADAPTER_PATH in settings. Future /local/process calls use this adapter.
-```
-
----
-
-## Local Pipeline (Zero API Calls)
-
-```bash
-# Check what's available locally
-curl http://localhost:8000/api/v1/local/status
-# → {"whisper_available": true, "finetuned_adapter_available": false, "active_extractor": "rule_based", "cost_per_video_usd": 0.0}
-
-# Process a video with no external API calls
-curl -X POST http://localhost:8000/api/v1/local/process \
-  -F "file=@my_call.mp4"
-# → {"job_id": "xyz-789", "status": "pending"}
-
-# Run a cost/latency benchmark
-curl -X POST http://localhost:8000/api/v1/local/benchmark \
-  -F "file=@my_call.mp4"
-# → {"latency_ratio": 1.3, "verdict": "local_recommended", "cost_savings_usd": 0.024}
-```
-
-The local pipeline falls back gracefully:
-- **Fine-tuned adapter present** → uses `FineTunedExtractionModel` (LoRA adapter via PEFT)
-- **No adapter** → uses `_RuleBasedExtractor` (keyword matching, zero dependencies, confidence=0.4)
-
----
-
-## Frontend Dashboard (Phase 6)
-
-The dashboard is a React 18 + Vite SPA with Tailwind CSS (white background, indigo primary, risk colour-coding).
-
-### Development
-
-```bash
-# 1. Install frontend deps (one-time)
-make frontend-install        # or: cd frontend && npm install
-
-# 2. Build for production (served by FastAPI at localhost:8000)
-make frontend-build          # → frontend/dist/
-
-# 3. Start the API
-make dev                     # FastAPI at http://localhost:8000
-# Visit http://localhost:8000 to see the dashboard
-```
-
-### Hot-reload dev mode (optional)
-
-```bash
-# Terminal 1 — API backend
-make dev                     # http://localhost:8000
-
-# Terminal 2 — Vite dev server with hot-reload
-make frontend-dev            # http://localhost:3000  (proxies /api → localhost:8000)
-```
-
-### Pages
-
-| Route | Page |
-|-------|------|
-| `/` | **Dashboard** — stat cards, recent jobs table, top objections mini-chart |
-| `/upload` | **Upload** — drag-drop zone, API/Local mode selector, live stage progress |
-| `/results/:id` | **Results** — risk score, expandable segment cards (risk-coloured borders) |
-| `/observatory` | **Observatory** — multi-model comparison, agreement scores |
-| `/intelligence` | **Intelligence** — bar/pie/line charts via Recharts |
-| `/finetuning` | **Fine-tuning** — training runs table, activate model button |
-| `/local` | **Local Pipeline** — model status checks, process locally, job history |
-| `/observability` | **Observability** — drift detection, calibration ECE, Prometheus integration |
-| `/search` | **Search** — full-text segment search, portfolio insights, objection velocity |
-| `/streaming` | **Live Stream** — WebSocket audio feed, real-time transcript + extraction |
-
----
-
-## Key Files
-
-- [claude.md](claude.md) — Project rules, conventions, strict requirements (read first)
-- [planning.md](planning.md) — Full architecture, design decisions, decision log
-- [tasks.md](tasks.md) — Complete audit trail of every task and prompt
-
----
-
-## License
-
-MIT
+© 2024-2026 Phani Marupaka. All rights reserved.

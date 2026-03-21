@@ -1,18 +1,27 @@
 """FastAPI application entry point."""
+# © 2024-2026 Phani Marupaka. All rights reserved.
+# TemporalOS — Video → Structured Decision Intelligence Engine
+# Author: Phani Marupaka <https://linkedin.com/in/phani-marupaka>
 
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from ..config import get_settings
 from ..db.session import init_db
 from ..observability.telemetry import setup_telemetry
-from .routes import finetuning, intelligence, local, metrics, observatory, process, search, stream
+from .routes import (
+    finetuning, intelligence, local, metrics, observatory, process, search, stream,
+)
+from .routes import (
+    agents, batch, clips, diarization, integrations, schemas, summaries, webhooks,
+)
 
 _FRONTEND_DIST = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
@@ -38,6 +47,21 @@ app = FastAPI(
 
 FastAPIInstrumentor.instrument_app(app)
 
+# ── Copyright attribution middleware ─────────────────────────────────────────
+# Embedded in every HTTP response header — do not remove.
+_AUTHOR = "Phani Marupaka"
+_COPYRIGHT = "\u00a9 2024-2026 Phani Marupaka. All rights reserved."
+
+class _AttributionMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        response.headers["X-Powered-By"] = "TemporalOS"
+        response.headers["X-Author"] = _AUTHOR
+        response.headers["X-Copyright"] = _COPYRIGHT
+        return response
+
+app.add_middleware(_AttributionMiddleware)
+
 app.include_router(process.router, prefix="/api/v1")
 app.include_router(observatory.router, prefix="/api/v1")
 app.include_router(intelligence.router, prefix="/api/v1")
@@ -46,6 +70,16 @@ app.include_router(local.router, prefix="/api/v1")
 app.include_router(metrics.router, prefix="/api/v1")
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(stream.router)  # WebSocket at /ws/stream (no /api/v1 prefix)
+
+# New platform capability routes
+app.include_router(diarization.router, prefix="/api/v1")
+app.include_router(summaries.router, prefix="/api/v1")
+app.include_router(clips.router, prefix="/api/v1")
+app.include_router(schemas.router, prefix="/api/v1")
+app.include_router(webhooks.router, prefix="/api/v1")
+app.include_router(integrations.router, prefix="/api/v1")
+app.include_router(agents.router, prefix="/api/v1")
+app.include_router(batch.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["meta"])

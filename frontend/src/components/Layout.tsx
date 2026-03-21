@@ -10,6 +10,13 @@ import {
   BarChart3,
   Search,
   Radio,
+  MessageSquare,
+  Target,
+  Layers,
+  Calendar,
+  Network,
+  Settings,
+  Plug,
 } from 'lucide-react'
 
 const navGroups = [
@@ -29,6 +36,17 @@ const navGroups = [
     ],
   },
   {
+    label: 'Capabilities',
+    items: [
+      { to: '/chat', label: 'Ask Library', icon: MessageSquare },
+      { to: '/coaching', label: 'Coaching', icon: Target },
+      { to: '/batch', label: 'Batch', icon: Layers },
+      { to: '/meeting-prep', label: 'Meeting Prep', icon: Calendar },
+      { to: '/knowledge-graph', label: 'Knowledge Graph', icon: Network },
+      { to: '/schema-builder', label: 'Schema Builder', icon: Settings },
+    ],
+  },
+  {
     label: 'Models',
     items: [
       { to: '/finetuning', label: 'Fine-tuning', icon: Zap },
@@ -40,6 +58,7 @@ const navGroups = [
     label: 'Platform',
     items: [
       { to: '/observability', label: 'Observability', icon: BarChart3 },
+      { to: '/integrations', label: 'Connections', icon: Plug },
     ],
   },
 ]
@@ -107,6 +126,28 @@ export function Layout({ children }: LayoutProps) {
             API Docs ↗
           </a>
           <p className="text-[10px] text-slate-700 mt-1.5">v0.1.0 · 10 Phases</p>
+          {/* Copyright — do not remove */}
+          <div className="mt-3 pt-3 border-t border-white/[0.04]">
+            <p className="text-[9px] text-slate-700 leading-tight">
+              © 2024-2026{' '}
+              <a
+                href="https://linkedin.com/in/phani-marupaka"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-indigo-400 transition-colors"
+              >
+                Phani Marupaka
+              </a>
+            </p>
+            <a
+              href="https://phanimarupaka.netlify.app"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[9px] text-slate-700 hover:text-indigo-400 transition-colors"
+            >
+              phanimarupaka.netlify.app ↗
+            </a>
+          </div>
         </div>
       </aside>
 
