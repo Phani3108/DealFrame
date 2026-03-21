@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -17,7 +18,16 @@ import {
   Network,
   Settings,
   Plug,
+  MessageSquareText,
+  ListChecks,
+  Shield,
+  GitCompare,
+  TrendingUp,
+  Bot,
+  ShieldCheck,
+  Bell,
 } from 'lucide-react'
+import { getNotifications, markAllNotificationsRead } from '../api/client'
 
 const navGroups = [
   {
@@ -33,6 +43,8 @@ const navGroups = [
     items: [
       { to: '/intelligence', label: 'Analytics', icon: Brain },
       { to: '/search', label: 'Search', icon: Search },
+      { to: '/patterns', label: 'Pattern Miner', icon: TrendingUp },
+      { to: '/diff', label: 'Diff Engine', icon: GitCompare },
     ],
   },
   {
@@ -40,6 +52,7 @@ const navGroups = [
     items: [
       { to: '/chat', label: 'Ask Library', icon: MessageSquare },
       { to: '/coaching', label: 'Coaching', icon: Target },
+      { to: '/copilot', label: 'Live Copilot', icon: Bot },
       { to: '/batch', label: 'Batch', icon: Layers },
       { to: '/meeting-prep', label: 'Meeting Prep', icon: Calendar },
       { to: '/knowledge-graph', label: 'Knowledge Graph', icon: Network },
@@ -59,6 +72,11 @@ const navGroups = [
     items: [
       { to: '/observability', label: 'Observability', icon: BarChart3 },
       { to: '/integrations', label: 'Connections', icon: Plug },
+      { to: '/annotations', label: 'Annotations', icon: MessageSquareText },
+      { to: '/review-queue', label: 'Review Queue', icon: ListChecks },
+      { to: '/audit-log', label: 'Audit Log', icon: Shield },
+      { to: '/admin', label: 'Admin', icon: ShieldCheck },
+      { to: '/settings', label: 'Settings', icon: Settings },
     ],
   },
 ]
@@ -68,6 +86,28 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
+  const [unread, setUnread] = useState(0)
+  const [showNotifs, setShowNotifs] = useState(false)
+  const [notifs, setNotifs] = useState<Array<{ id: string; type: string; title: string; message: string; read: boolean; created_at: number }>>([])
+
+  useEffect(() => {
+    getNotifications('default', true)
+      .then(r => { setUnread(r.unread_count ?? 0); setNotifs(r.notifications ?? []) })
+      .catch(() => {})
+    const iv = setInterval(() => {
+      getNotifications('default', true)
+        .then(r => { setUnread(r.unread_count ?? 0); setNotifs(r.notifications ?? []) })
+        .catch(() => {})
+    }, 30000)
+    return () => clearInterval(iv)
+  }, [])
+
+  const handleMarkAll = async () => {
+    await markAllNotificationsRead('default').catch(() => {})
+    setUnread(0)
+    setNotifs([])
+  }
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* Dark Sidebar */}
@@ -152,9 +192,49 @@ export function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto bg-slate-50">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar with notification bell */}
+        <header className="flex items-center justify-end px-6 py-2.5 border-b border-slate-200 bg-white flex-shrink-0">
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifs(!showNotifs)}
+              className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition"
+            >
+              <Bell className="w-5 h-5" />
+              {unread > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
+            </button>
+            {showNotifs && (
+              <div className="absolute right-0 mt-1 w-80 bg-white rounded-xl border border-slate-200 shadow-lg z-50 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                  <span className="text-sm font-bold text-slate-700">Notifications</span>
+                  {unread > 0 && (
+                    <button onClick={handleMarkAll} className="text-xs text-indigo-500 hover:text-indigo-700 font-medium transition">Mark all read</button>
+                  )}
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifs.length === 0 ? (
+                    <p className="text-sm text-slate-400 text-center py-6">All caught up!</p>
+                  ) : (
+                    notifs.slice(0, 10).map(n => (
+                      <div key={n.id} className="px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
+                        <p className="text-xs font-semibold text-slate-700">{n.title}</p>
+                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </header>
+        <main className="flex-1 overflow-auto bg-slate-50">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

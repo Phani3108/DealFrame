@@ -5,6 +5,8 @@ Captures:
 - Resource type and ID
 - Timestamp, IP address, user agent
 - Request/response summary
+
+Supports DB persistence via optional session_factory.
 """
 from __future__ import annotations
 
@@ -12,7 +14,11 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +51,16 @@ class AuditEntry:
 
 
 class AuditTrail:
-    """In-memory audit trail (production would use append-only DB table)."""
+    """Audit trail with optional DB persistence.
 
-    def __init__(self) -> None:
+    When session_factory is None (default), operates purely in-memory
+    (backward compatible with all existing tests).
+    When session_factory is provided, async methods persist to/load from DB.
+    """
+
+    def __init__(self, session_factory: Optional[async_sessionmaker[AsyncSession]] = None) -> None:
         self._entries: List[AuditEntry] = []
+        self._sf = session_factory
 
     def log(self, user_id: str, tenant_id: str, action: str,
             resource_type: str, resource_id: str = "",
@@ -70,6 +82,28 @@ class AuditTrail:
         logger.info(f"AUDIT: {user_id}@{tenant_id} {action} {resource_type}/{resource_id}")
         return entry
 
+    async def async_log(self, user_id: str, tenant_id: str, action: str,
+                        resource_type: str, resource_id: str = "",
+                        details: Optional[Dict[str, Any]] = None,
+                        ip_address: str = "", user_agent: str = "") -> AuditEntry:
+        """Log with DB persistence (write-through)."""
+        entry = self.log(user_id, tenant_id, action, resource_type,
+                         resource_id, details, ip_address, user_agent)
+        if self._sf:
+            from ..db.models import AuditLog as AuditLogModel
+            async with self._sf() as session:
+                record = AuditLogModel(
+                    action=entry.action,
+                    resource_type=entry.resource_type,
+                    resource_id=entry.resource_id,
+                    details=entry.details,
+                    ip_address=entry.ip_address,
+                    created_at=datetime.fromtimestamp(entry.timestamp, tz=timezone.utc),
+                )
+                session.add(record)
+                await session.commit()
+        return entry
+
     def query(self, user_id: str = "", tenant_id: str = "",
               action: str = "", resource_type: str = "",
               limit: int = 100, offset: int = 0) -> List[AuditEntry]:
@@ -82,9 +116,62 @@ class AuditTrail:
             results = [e for e in results if e.action == action]
         if resource_type:
             results = [e for e in results if e.resource_type == resource_type]
-        # Most recent first
         results = sorted(results, key=lambda e: e.timestamp, reverse=True)
         return results[offset:offset + limit]
+
+    async def async_query(self, user_id: str = "", tenant_id: str = "",
+                          action: str = "", resource_type: str = "",
+                          limit: int = 100, offset: int = 0) -> List[AuditEntry]:
+        """Query from DB if available, otherwise from memory."""
+        if self._sf:
+            from ..db.models import AuditLog as AuditLogModel
+            async with self._sf() as session:
+                stmt = select(AuditLogModel).order_by(AuditLogModel.created_at.desc())
+                if action:
+                    stmt = stmt.where(AuditLogModel.action == action)
+                if resource_type:
+                    stmt = stmt.where(AuditLogModel.resource_type == resource_type)
+                stmt = stmt.offset(offset).limit(limit)
+                rows = (await session.execute(stmt)).scalars().all()
+                return [
+                    AuditEntry(
+                        id=str(r.id),
+                        timestamp=r.created_at.timestamp() if r.created_at else 0,
+                        user_id=str(r.user_id or ""),
+                        tenant_id=str(r.tenant_id or ""),
+                        action=r.action,
+                        resource_type=r.resource_type,
+                        resource_id=r.resource_id,
+                        details=r.details or {},
+                        ip_address=r.ip_address or "",
+                    )
+                    for r in rows
+                ]
+        return self.query(user_id, tenant_id, action, resource_type, limit, offset)
+
+    async def load_from_db(self) -> None:
+        """Populate in-memory cache from DB at startup."""
+        if not self._sf:
+            return
+        from ..db.models import AuditLog as AuditLogModel
+        async with self._sf() as session:
+            rows = (await session.execute(
+                select(AuditLogModel).order_by(AuditLogModel.created_at.desc()).limit(1000)
+            )).scalars().all()
+            self._entries = [
+                AuditEntry(
+                    id=str(r.id),
+                    timestamp=r.created_at.timestamp() if r.created_at else 0,
+                    user_id=str(r.user_id or ""),
+                    tenant_id=str(r.tenant_id or ""),
+                    action=r.action,
+                    resource_type=r.resource_type,
+                    resource_id=r.resource_id,
+                    details=r.details or {},
+                    ip_address=r.ip_address or "",
+                )
+                for r in rows
+            ]
 
     def count(self, tenant_id: str = "") -> int:
         if tenant_id:
@@ -108,6 +195,13 @@ def get_audit_trail() -> AuditTrail:
     global _trail
     if _trail is None:
         _trail = AuditTrail()
+    return _trail
+
+
+def init_audit_trail(session_factory: Optional[async_sessionmaker[AsyncSession]] = None) -> AuditTrail:
+    """Initialize the audit trail with DB persistence. Call once at startup."""
+    global _trail
+    _trail = AuditTrail(session_factory=session_factory)
     return _trail
 
 

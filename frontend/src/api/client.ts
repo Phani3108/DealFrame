@@ -484,3 +484,173 @@ export const exportToNotion = (jobId: string, payload: { token: string; database
     `/integrations/notion/export/${jobId}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) },
   )
+
+// ─── Annotations (Phase J) ──────────────────────────────────────────────────
+
+export interface Annotation {
+  id: string
+  job_id: string
+  user_id: string
+  segment_index: number
+  start_word: number
+  end_word: number
+  label: string
+  comment: string
+  tags: string[]
+  resolved: boolean
+  created_at: number
+  updated_at: number
+}
+
+export const listAnnotations = (jobId: string) =>
+  request<{ annotations: Annotation[]; total: number }>(`/annotations?job_id=${jobId}`)
+
+export const createAnnotation = (data: {
+  job_id: string; user_id?: string; segment_index: number;
+  start_word: number; end_word: number; label: string; comment?: string; tags?: string[]
+}) =>
+  request<{ annotation: Annotation }>(
+    '/annotations',
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) },
+  )
+
+export const updateAnnotation = (id: string, updates: Partial<Pick<Annotation, 'label' | 'comment' | 'tags' | 'resolved'>>) =>
+  request<{ annotation: Annotation }>(
+    `/annotations/${id}`,
+    { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) },
+  )
+
+export const deleteAnnotation = (id: string) =>
+  request<{ deleted: boolean }>(`/annotations/${id}`, { method: 'DELETE' })
+
+export const resolveAnnotation = (id: string) =>
+  request<{ annotation: Annotation }>(`/annotations/${id}/resolve`, { method: 'POST' })
+
+export const getAnnotationSummary = (jobId: string) =>
+  request<{ job_id: string; label_summary: Record<string, number>; total: number }>(`/annotations/summary?job_id=${jobId}`)
+
+// ─── Active Learning (Phase J) ──────────────────────────────────────────────
+
+export interface ReviewItem {
+  id: string
+  job_id: string
+  segment_index: number
+  extraction: Record<string, unknown>
+  confidence: number
+  status: string
+  reviewer?: string
+  corrected_extraction?: Record<string, unknown>
+  review_notes?: string
+  created_at: number
+  reviewed_at?: number
+}
+
+export const getReviewQueueFull = (status?: string, limit = 50) => {
+  const params = new URLSearchParams({ limit: String(limit) })
+  if (status) params.set('status', status)
+  return request<{ items: ReviewItem[]; total: number }>(`/active-learning/queue?${params}`)
+}
+
+export const getALMetrics = () =>
+  request<{ total_items: number; status_counts: Record<string, number>; avg_confidence: number; threshold: number }>('/active-learning/metrics')
+
+export const approveReview = (itemId: string, reviewer = 'default', notes = '') =>
+  request<{ item: ReviewItem }>(
+    `/active-learning/${itemId}/approve`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reviewer, notes }) },
+  )
+
+export const correctReview = (itemId: string, reviewer: string, corrected: Record<string, unknown>, notes = '') =>
+  request<{ item: ReviewItem }>(
+    `/active-learning/${itemId}/correct`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reviewer, notes, corrected_extraction: corrected }) },
+  )
+
+export const rejectReview = (itemId: string, reviewer = 'default', notes = '') =>
+  request<{ item: ReviewItem }>(
+    `/active-learning/${itemId}/reject`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reviewer, notes }) },
+  )
+
+// ─── Audit Trail (Phase J) ──────────────────────────────────────────────────
+
+export interface AuditEntry {
+  id: string
+  timestamp: number
+  user_id: string
+  tenant_id: string
+  action: string
+  resource_type: string
+  resource_id: string
+  details: Record<string, unknown>
+  ip_address: string
+}
+
+export const queryAudit = (params?: { action?: string; resource_type?: string; limit?: number; offset?: number }) => {
+  const p = new URLSearchParams()
+  if (params?.action) p.set('action', params.action)
+  if (params?.resource_type) p.set('resource_type', params.resource_type)
+  if (params?.limit) p.set('limit', String(params.limit))
+  if (params?.offset) p.set('offset', String(params.offset))
+  return request<{ entries: AuditEntry[]; total: number }>(`/audit?${p}`)
+}
+
+export const getAuditStats = () =>
+  request<{ total_entries: number; action_counts: Record<string, number>; resource_counts: Record<string, number> }>('/audit/stats')
+
+// ─── Diff Engine (Phase J) ──────────────────────────────────────────────────
+
+export const compareDiff = (jobA: string, jobB: string) =>
+  request<{ job_a: string; job_b: string; report: Record<string, unknown> }>(`/diff/${jobA}/${jobB}`)
+
+export const listComparableJobs = () =>
+  request<{ jobs: Array<{ job_id: string; status: string }>; total: number }>('/diff/jobs')
+
+// ─── Patterns (Phase J) ─────────────────────────────────────────────────────
+
+export const getPatterns = (patternType = 'objection_risk', limit = 20) =>
+  request<{ pattern_type: string; patterns: unknown[]; total_segments: number }>(`/patterns?pattern_type=${patternType}&limit=${limit}`)
+
+export const getPatternSummary = () =>
+  request<{ total_jobs: number; completed_jobs: number; total_segments: number; available_patterns: string[] }>('/patterns/summary')
+
+// ─── Copilot (Phase J) ──────────────────────────────────────────────────────
+
+export const analyzeLive = (transcript: string, segments: Record<string, unknown>[] = []) =>
+  request<{ signals: unknown }>(
+    '/copilot/analyze',
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transcript_so_far: transcript, segments_so_far: segments }) },
+  )
+
+export const getCopilotConfig = () =>
+  request<{ signal_types: string[]; enabled: boolean; refresh_interval_ms: number }>('/copilot/config')
+
+// ─── Admin (Phase J) ────────────────────────────────────────────────────────
+
+export const getAdminTenants = () =>
+  request<{ tenants: Array<{ tenant_id: string; slug: string; plan: string; max_videos: number; max_users: number }>; total: number }>('/admin/tenants')
+
+export const getAdminUsers = () =>
+  request<{ users: Array<{ email: string; display_name: string; role: string; tier: string; created_at: string }>; total: number }>('/admin/users')
+
+export const getAdminRoles = () =>
+  request<{ roles: Record<string, string[]> }>('/admin/roles')
+
+export const getAdminSettings = () =>
+  request<Record<string, unknown>>('/admin/settings')
+
+export const getSystemStats = () =>
+  request<{ users: number; tenants: number; audit_entries: number; annotations: number; review_queue_pending: number; review_queue_total: number }>('/admin/stats')
+
+// ─── Notifications extended (Phase J) ────────────────────────────────────────
+
+export const getNotifications = (userId = 'default', unreadOnly = false) =>
+  request<{ notifications: Array<{ id: string; type: string; title: string; message: string; read: boolean; created_at: number }>; unread_count: number }>(
+    `/notifications?user_id=${userId}&unread_only=${unreadOnly}`,
+  )
+
+export const markNotificationRead = (notifId: string, userId = 'default') =>
+  request<{ success: boolean }>(`/notifications/${notifId}/read?user_id=${userId}`, { method: 'POST' })
+
+export const markAllNotificationsRead = (userId = 'default') =>
+  request<{ marked_read: number }>(`/notifications/read-all?user_id=${userId}`, { method: 'POST' })

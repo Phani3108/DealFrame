@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green?logo=fastapi)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18-61dafb?logo=react)](https://react.dev)
-[![Tests](https://img.shields.io/badge/Tests-327%20passing-brightgreen)](#)
+[![Tests](https://img.shields.io/badge/Tests-688%20passing-brightgreen)](#)
 
 ---
 
@@ -63,6 +63,11 @@ Upload a video → get back topics, sentiment, risk scores, objections, decision
 - **Batch processing** — Async priority queue to process hundreds of URLs in parallel
 - **Python SDK** — Zero-dependency stdlib-only client, fully typed
 - **Observability** — OpenTelemetry traces, Prometheus metrics, model drift detection
+- **Active learning** — Human-in-the-loop review queue with gating
+- **Multi-agent orchestration** — RAG agent, copilot agent, autonomous workflows
+- **Live copilot** — Real-time coaching signals during live calls
+- **CI/CD** — GitHub Actions with lint, test, security scan (Bandit)
+- **Security hardening** — HSTS, CSP, RBAC, JWT auth, audit trail
 
 ---
 
@@ -83,6 +88,13 @@ cd frontend && npm install && npm run dev
 # 4. Open http://localhost:5173
 ```
 
+Or with Docker:
+```bash
+cp .env.example .env   # configure your keys
+docker compose up -d
+# API: http://localhost:8000  |  Dashboard: http://localhost:3000
+```
+
 ---
 
 ## Stack
@@ -90,12 +102,39 @@ cd frontend && npm install && npm run dev
 | Layer | Tech |
 |---|---|
 | Video | FFmpeg, OpenCV, PySceneDetect |
-| ASR | Whisper (local), Deepgram (streaming) |
-| Vision | GPT-4o / Claude Vision / Qwen-VL |
-| API | FastAPI, SQLAlchemy, aiosqlite |
-| Frontend | React 18, Vite, TailwindCSS |
-| Observability | OpenTelemetry, Prometheus |
-| Fine-tuning | LoRA via HuggingFace PEFT |
+| ASR | Whisper (local), Deepgram (streaming WebSocket) |
+| Vision | GPT-4o / Claude Vision / Qwen-VL, Tesseract OCR |
+| API | FastAPI, SQLAlchemy async, PostgreSQL, Alembic |
+| Frontend | React 18, Vite, TailwindCSS, 25 pages |
+| Storage | Local filesystem / S3 (MinIO for dev) |
+| Auth | JWT + RBAC (admin/analyst/viewer) + multi-tenant |
+| Observability | OpenTelemetry, Prometheus, drift detection |
+| Fine-tuning | LoRA via HuggingFace PEFT, Unsloth |
+| CI/CD | GitHub Actions, Docker Compose, Bandit security |
+
+---
+
+## Documentation
+
+- [Architecture Overview](docs/architecture.md) — System design, module map, data flow
+- [API Reference](docs/api-reference.md) — All endpoints with examples
+- [Deployment Guide](docs/deployment.md) — Docker, env vars, production setup
+- Interactive API docs: `http://localhost:8000/docs` (Swagger UI)
+
+---
+
+## Python SDK
+
+```python
+from temporalos_sdk import TemporalOSClient
+
+client = TemporalOSClient("http://localhost:8000")
+job = client.upload("meeting.mp4")
+result = client.wait_for_result(job.job_id)
+
+for segment in result.segments:
+    print(f"{segment['topic']}: risk={segment.get('risk_score', 0)}")
+```
 
 ---
 
@@ -104,6 +143,7 @@ cd frontend && npm install && npm run dev
 ```bash
 make test        # unit tests
 make test-e2e    # end-to-end suite
+pytest --cov=temporalos --cov-report=html   # with coverage
 ```
 
 ---

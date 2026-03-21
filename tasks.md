@@ -19,6 +19,82 @@
 
 ## Active Tasks
 
+### TASK-025: Phase M — Documentation, SDK & Developer Experience (27 tests)
+- **Status**: 🟢 Completed
+- **Date**: 2025-07-19
+- **Prompt/Trigger**: User: "now let's attack the other phases as previously discussed"
+- **Work Done**:
+  - `temporalos_sdk/__init__.py` — Python SDK: TemporalOSClient with 13 typed methods (health, upload, get_job, wait_for_result, list_jobs, search, get_objections, get_risk_summary, list_annotations, create_annotation, get_patterns, analyze_live, system_stats), JobResult/AnnotationResult dataclasses, TemporalOSError, zero external dependencies
+  - `docs/deployment.md` — Full deployment guide: Docker Compose, env vars, database setup, local dev, production (health probes, security headers, Nginx reverse proxy), storage config, monitoring
+  - `docs/architecture.md` — System architecture: ASCII diagram, module map (30+ modules organized by domain), all 28 API routes, 25 frontend pages, data flow, tech stack
+  - `docs/api-reference.md` — API reference: auth, core endpoints, intelligence, annotations, active learning, admin, audit, health probes, SDK usage examples
+  - Updated `README.md` — Added Docker quick start, expanded Stack table, Documentation section with doc links, Python SDK section, test count to 688
+  - `tests/e2e/test_phase_m_documentation.py` — **27 tests, ALL PASSING** (SDK: 10, Docs: 6, README: 6, OpenAPI: 5)
+- **Files Changed**: 5 new files, 1 modified (README.md)
+
+### TASK-024: Phase L — CI/CD, Security & Production Hardening (18 tests)
+- **Status**: 🟢 Completed
+- **Date**: 2025-07-19
+- **Prompt/Trigger**: User: "now let's attack the other phases as previously discussed"
+- **Work Done**:
+  - `.github/workflows/ci.yml` — 4-job GitHub Actions: lint (ruff+mypy), test-backend (pytest+coverage), test-frontend (tsc+npm build), security (bandit scan)
+  - `docker-compose.yml` — Added frontend service, health checks, named volumes
+  - Security headers middleware in main.py: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy, HSTS, CSP
+  - Health probes: /health/live (liveness), /health/ready (readiness with DB check)
+  - `tests/e2e/test_phase_l_cicd.py` — **18 tests, ALL PASSING**
+- **Files Changed**: 2 new files, 2 modified (main.py, docker-compose.yml)
+
+### TASK-023: Phase K — Real Integrations & Production Streaming (31 tests)
+- **Status**: 🟢 Completed
+- **Date**: 2025-07-19
+- **Prompt/Trigger**: User: "now let's attack the other phases as previously discussed"
+- **Work Done**:
+  - `temporalos/audio/deepgram.py` — Real Deepgram WebSocket streaming ASR with word-level timestamps
+  - `temporalos/storage/__init__.py` — StorageBackend ABC + LocalStorage (filesystem, path traversal protection) + S3Storage (boto3, async executors) + get_storage() factory singleton
+  - Config consolidation: StorageSettings, DeepgramSettings, IntegrationSettings in config.py
+  - Fixed streaming factory to catch ValueError from Deepgram constructor
+  - `tests/e2e/test_phase_k_integrations.py` — **31 tests, ALL PASSING**
+- **Files Changed**: 2 new files, 2 modified (config.py, streaming.py)
+
+### TASK-022: Phase J — Frontend Completion & Real UX (36 tests)
+- **Status**: 🟢 Completed
+- **Date**: 2025-07-19
+- **Prompt/Trigger**: User: "now let's attack the other phases as previously discussed"
+- **Work Done**:
+  - 7 new API route files: annotations, active_learning, audit, diff, patterns, copilot, admin
+  - 8 new React pages: Annotations, ReviewQueue, AuditLog, DiffView, PatternMiner, LiveCopilot, Admin, SettingsPage
+  - ~200 lines of typed API client functions in frontend/src/api/client.ts
+  - Updated App.tsx (8 routes), Layout.tsx (new nav items + notification bell)
+  - `tests/e2e/test_phase_j_frontend.py` — **36 passed, 1 skipped, 0 failures**
+- **Files Changed**: 15 new files, 4 modified (main.py, client.ts, App.tsx, Layout.tsx)
+
+### TASK-021: Phase I — State Persistence & Data Integrity (40 tests)
+- **Status**: 🟢 Completed
+- **Date**: 2025-07-18
+- **Prompt/Trigger**: User: "First we fix, and then we build. Let's continue"
+- **Work Done**:
+  - **Alembic migrations**: Installed alembic + aiosqlite, initialized async template, configured env.py/alembic.ini, generated 3 migrations (initial schema, annotations+review_items, user tier column), all applied
+  - **New DB models**: `AnnotationRecord` (annotations table) + `ReviewItemRecord` (review_items table) with indexes on uid/job_id/label/status
+  - **User model**: Added `tier` column (free/pro/enterprise)
+  - **AuditTrail** (`temporalos/enterprise/audit.py`): Added session_factory, async_log(), async_query(), load_from_db(), init_audit_trail()
+  - **NotificationService** (`temporalos/notifications/__init__.py`): Added session_factory, async_send(), async_mark_read(), load_from_db(), init_notification_service()
+  - **AnnotationStore** (`temporalos/intelligence/annotations.py`): Added session_factory, async_create(), async_update(), async_delete(), load_from_db(), init_annotation_store()
+  - **ActiveLearningQueue** (`temporalos/intelligence/active_learning.py`): Added session_factory, async_gate/approve/correct/reject(), load_from_db(), init_active_learning_queue()
+  - **Auth** (`temporalos/auth/__init__.py`): Stable AUTH_SECRET from env var (no more token invalidation on restart), init_auth(), persist_user(), load_users_from_db()
+  - **Multi-tenant** (`temporalos/enterprise/multi_tenant.py`): init_tenant_persistence(), async_register_tenant(), load_tenants_from_db()
+  - **App startup** (`temporalos/api/main.py`): lifespan now initializes all services with DB session factory + loads from DB
+  - **Session factory** (`temporalos/db/session.py`): Added get_session_factory()
+  - **Config** (`temporalos/config.py`): Added auth_secret setting
+  - **Tests**: `tests/e2e/test_phase_i_persistence.py` — **40 tests, ALL PASSING**
+  - **Backward compat**: All 119 Phase F/G/H tests pass unchanged (sync methods preserved)
+- **Files Changed**: 10 modified + 3 new (test, _db_lazy.py, alembic migrations)
+
+### TASK-020: Strategic Planning — Next 5 Phases (I/J/K/L/M)
+- **Status**: 🟢 Completed
+- **Date**: 2025-07-18
+- **Prompt/Trigger**: User: "What are the next level enhancements?"
+- **Work Done**: Comprehensive audit of 132 Python files / 16,840 lines. Identified critical gaps (in-memory state, missing frontend pages, no CI/CD). Planned 5 phases with detailed deliverables.
+
 ### TASK-019: Phase H — Enterprise Scale (10 modules + 53 tests)
 - **Status**: 🟢 Completed
 - **Date**: 2025-07-17

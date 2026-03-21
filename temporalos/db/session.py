@@ -1,6 +1,7 @@
 """Async SQLAlchemy session factory and DB initialisation."""
 
 from collections.abc import AsyncGenerator
+from typing import Optional
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -30,6 +31,11 @@ async def init_db() -> None:
 
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+
+def get_session_factory() -> Optional[async_sessionmaker[AsyncSession]]:
+    """Return the async session factory (available after init_db)."""
+    return _AsyncSessionLocal
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:

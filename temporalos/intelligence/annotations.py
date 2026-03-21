@@ -5,13 +5,18 @@ Features:
 - Labels feed into fine-tuning training data
 - CRUD operations on annotations
 - Label aggregation for active learning
+- DB persistence via optional session_factory
 """
 from __future__ import annotations
 
 import time
 import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 
 @dataclass
@@ -47,15 +52,16 @@ class Annotation:
 
 
 class AnnotationStore:
-    """In-memory annotation store with CRUD."""
+    """Annotation store with optional DB persistence."""
 
     VALID_LABELS = {
         "objection", "decision_signal", "risk", "positive",
         "question", "action_item", "custom",
     }
 
-    def __init__(self) -> None:
+    def __init__(self, session_factory: Optional[async_sessionmaker[AsyncSession]] = None) -> None:
         self._annotations: Dict[str, Annotation] = {}
+        self._sf = session_factory
 
     def create(self, job_id: str, user_id: str, segment_index: int,
                start_word: int, end_word: int, label: str,
@@ -136,6 +142,77 @@ class AnnotationStore:
     def count(self) -> int:
         return len(self._annotations)
 
+    # ── Async DB-backed methods ───────────────────────────────────────────────
+
+    async def async_create(self, job_id: str, user_id: str, segment_index: int,
+                           start_word: int, end_word: int, label: str,
+                           comment: str = "", tags: Optional[List[str]] = None) -> Annotation:
+        """Create with DB persistence."""
+        ann = self.create(job_id, user_id, segment_index, start_word, end_word,
+                          label, comment, tags)
+        if self._sf:
+            from ..db.models import AnnotationRecord
+            async with self._sf() as session:
+                record = AnnotationRecord(
+                    uid=ann.id, job_id=ann.job_id, user_id=ann.user_id,
+                    segment_index=ann.segment_index, start_word=ann.start_word,
+                    end_word=ann.end_word, label=ann.label, comment=ann.comment,
+                    tags=ann.tags, resolved=ann.resolved,
+                    created_at=datetime.fromtimestamp(ann.created_at, tz=timezone.utc),
+                    updated_at=datetime.fromtimestamp(ann.updated_at, tz=timezone.utc),
+                )
+                session.add(record)
+                await session.commit()
+        return ann
+
+    async def async_update(self, annotation_id: str, **kwargs: Any) -> Optional[Annotation]:
+        """Update with DB persistence."""
+        ann = self.update(annotation_id, **kwargs)
+        if ann and self._sf:
+            from ..db.models import AnnotationRecord
+            async with self._sf() as session:
+                row = (await session.execute(
+                    select(AnnotationRecord).where(AnnotationRecord.uid == annotation_id)
+                )).scalar_one_or_none()
+                if row:
+                    for key, val in kwargs.items():
+                        if hasattr(row, key) and key not in ("id", "uid", "job_id", "created_at"):
+                            setattr(row, key, val)
+                    row.updated_at = datetime.now(timezone.utc)
+                    await session.commit()
+        return ann
+
+    async def async_delete(self, annotation_id: str) -> bool:
+        """Delete with DB persistence."""
+        result = self.delete(annotation_id)
+        if result and self._sf:
+            from ..db.models import AnnotationRecord
+            async with self._sf() as session:
+                await session.execute(
+                    delete(AnnotationRecord).where(AnnotationRecord.uid == annotation_id)
+                )
+                await session.commit()
+        return result
+
+    async def load_from_db(self) -> None:
+        """Populate in-memory from DB at startup."""
+        if not self._sf:
+            return
+        from ..db.models import AnnotationRecord
+        async with self._sf() as session:
+            rows = (await session.execute(select(AnnotationRecord))).scalars().all()
+            for r in rows:
+                ann = Annotation(
+                    id=r.uid, job_id=r.job_id, user_id=r.user_id,
+                    segment_index=r.segment_index, start_word=r.start_word,
+                    end_word=r.end_word, label=r.label, comment=r.comment or "",
+                    created_at=r.created_at.timestamp() if r.created_at else 0,
+                    updated_at=r.updated_at.timestamp() if r.updated_at else 0,
+                    tags=r.tags if isinstance(r.tags, list) else [],
+                    resolved=r.resolved or False,
+                )
+                self._annotations[ann.id] = ann
+
 
 _store: Optional[AnnotationStore] = None
 
@@ -144,6 +221,13 @@ def get_annotation_store() -> AnnotationStore:
     global _store
     if _store is None:
         _store = AnnotationStore()
+    return _store
+
+
+def init_annotation_store(session_factory: Optional[async_sessionmaker[AsyncSession]] = None) -> AnnotationStore:
+    """Initialize with DB persistence. Call once at startup."""
+    global _store
+    _store = AnnotationStore(session_factory=session_factory)
     return _store
 
 

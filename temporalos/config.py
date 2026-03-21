@@ -71,6 +71,37 @@ class FineTuningSettings(BaseModel):
     max_length: int = 1024
 
 
+class StorageSettings(BaseModel):
+    backend: str = "local"  # local | s3
+    local_dir: str = "/tmp/temporalos/storage"
+    s3_bucket: str = "temporalos"
+    s3_endpoint_url: str = ""
+    s3_region: str = "us-east-1"
+
+
+class DeepgramSettings(BaseModel):
+    api_key: str = ""
+    model: str = "nova-2"
+    language: str = "en"
+
+
+class IntegrationSettings(BaseModel):
+    """Consolidated external integration credentials."""
+    deepgram_api_key: str = ""
+    salesforce_client_id: str = ""
+    salesforce_client_secret: str = ""
+    hubspot_client_id: str = ""
+    hubspot_client_secret: str = ""
+    slack_client_id: str = ""
+    slack_client_secret: str = ""
+    slack_signing_secret: str = ""
+    zoom_client_id: str = ""
+    zoom_client_secret: str = ""
+    zoom_webhook_secret: str = ""
+    notion_api_key: str = ""
+    zapier_hook_secret: str = ""
+
+
 class Settings(BaseSettings):
     app: AppSettings = AppSettings()
     database: DatabaseSettings = DatabaseSettings()
@@ -81,12 +112,16 @@ class Settings(BaseSettings):
     extraction: ExtractionSettings = ExtractionSettings()
     telemetry: TelemetrySettings = TelemetrySettings()
     finetuning: FineTuningSettings = FineTuningSettings()
+    storage: StorageSettings = StorageSettings()
+    deepgram: DeepgramSettings = DeepgramSettings()
+    integrations: IntegrationSettings = IntegrationSettings()
 
     # Top-level env var overrides (most commonly set in .env)
     openai_api_key: str = ""
     anthropic_api_key: str = ""
     database_url: str = ""
     temporalos_mode: str = "api"  # api | local
+    auth_secret: str = ""  # Stable JWT signing key; auto-generated if empty
 
     model_config = SettingsConfigDict(
         env_file=".env",

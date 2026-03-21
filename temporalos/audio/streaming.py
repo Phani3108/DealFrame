@@ -110,6 +110,6 @@ def get_streaming_asr(backend: str = "mock") -> StreamingASRBase:
             from .deepgram import DeepgramStreamingASR  # type: ignore[import]
 
             return DeepgramStreamingASR()
-        except ImportError:
+        except (ImportError, ValueError):
             pass
     return MockStreamingASR()

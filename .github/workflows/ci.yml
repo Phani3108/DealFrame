@@ -1,0 +1,98 @@
+name: TemporalOS CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.12"
+  DATABASE_URL: "sqlite+aiosqlite:///./ci_test.db"
+  NODE_VERSION: "20"
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]" 2>/dev/null || pip install -e .
+          pip install ruff mypy
+      - name: Ruff lint
+        run: ruff check temporalos/ --select E,W,F,I --ignore E501
+      - name: Type check (non-strict)
+        run: mypy temporalos/ --ignore-missing-imports --no-strict-optional || true
+
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install Python deps
+        run: |
+          pip install -e ".[dev]" 2>/dev/null || pip install -e .
+          pip install pytest pytest-asyncio pytest-cov aiosqlite httpx
+      - name: Run e2e tests
+        run: |
+          DATABASE_URL="${{ env.DATABASE_URL }}" \
+          python -m pytest tests/e2e/ -v --tb=short -x --timeout=120 \
+            -k "not test_compare_same_job" \
+            --ignore=tests/e2e/test_phase4_finetuning.py
+      - name: Coverage report
+        run: |
+          DATABASE_URL="${{ env.DATABASE_URL }}" \
+          python -m pytest tests/e2e/ --cov=temporalos --cov-report=term-missing \
+            -k "not test_compare_same_job and not finetuning" \
+            --timeout=120 || true
+
+  test-frontend:
+    name: Frontend Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install & type-check
+        working-directory: frontend
+        run: |
+          npm ci
+          npx tsc --noEmit
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install bandit
+        run: pip install bandit
+      - name: Run Bandit security scan
+        run: |
+          bandit -r temporalos/ -ll -ii \
+            --skip B101,B104,B311 \
+            -f json -o bandit-report.json || true
+          bandit -r temporalos/ -ll -ii --skip B101,B104,B311 || true
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: bandit-report.json

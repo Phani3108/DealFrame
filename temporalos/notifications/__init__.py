@@ -2,13 +2,18 @@
 
 Supports: in-app bell, email (SMTP/SendGrid), webhook.
 Types: risk_alert, batch_complete, drift_detected, weekly_digest.
+DB persistence via optional session_factory.
 """
 from __future__ import annotations
 
 import logging
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
 
@@ -38,11 +43,12 @@ class Notification:
 
 
 class NotificationService:
-    """In-memory notification service with pluggable delivery channels."""
+    """Notification service with optional DB persistence."""
 
-    def __init__(self) -> None:
-        self._notifications: Dict[str, List[Notification]] = {}  # user_id → [notifications]
+    def __init__(self, session_factory: Optional[async_sessionmaker[AsyncSession]] = None) -> None:
+        self._notifications: Dict[str, List[Notification]] = {}
         self._counter = 0
+        self._sf = session_factory
 
     def send(
         self,
@@ -128,6 +134,67 @@ class NotificationService:
             metadata={"metric": metric, "severity": severity},
         )
 
+    # ── Async DB-backed methods ───────────────────────────────────────────────
+
+    async def async_send(self, user_id: str, type: str, title: str,
+                         message: str, metadata: Optional[Dict[str, Any]] = None) -> Notification:
+        """Send with DB persistence (write-through)."""
+        n = self.send(user_id, type, title, message, metadata)
+        if self._sf:
+            from ..db.models import Notification as NotifModel
+            async with self._sf() as session:
+                record = NotifModel(
+                    type=n.type, title=n.title, message=n.message,
+                    read=False, extra=n.metadata,
+                    created_at=datetime.fromtimestamp(n.created_at, tz=timezone.utc),
+                )
+                session.add(record)
+                await session.commit()
+        return n
+
+    async def async_mark_read(self, user_id: str, notification_id: str) -> bool:
+        """Mark read with DB persistence."""
+        result = self.mark_read(user_id, notification_id)
+        if result and self._sf:
+            from ..db.models import Notification as NotifModel
+            async with self._sf() as session:
+                # Best-effort: try to match by ID suffix
+                try:
+                    nid = int(notification_id.split("-")[-1])
+                    await session.execute(
+                        update(NotifModel).where(NotifModel.id == nid).values(read=True)
+                    )
+                    await session.commit()
+                except (ValueError, IndexError):
+                    pass
+        return result
+
+    async def load_from_db(self) -> None:
+        """Populate in-memory from DB at startup."""
+        if not self._sf:
+            return
+        from ..db.models import Notification as NotifModel
+        async with self._sf() as session:
+            rows = (await session.execute(
+                select(NotifModel).order_by(NotifModel.created_at.desc()).limit(500)
+            )).scalars().all()
+            for r in rows:
+                uid = str(r.user_id or "default")
+                n = Notification(
+                    id=f"notif-{r.id}",
+                    user_id=uid,
+                    type=r.type,
+                    title=r.title,
+                    message=r.message,
+                    read=r.read,
+                    metadata=r.extra or {},
+                    created_at=r.created_at.timestamp() if r.created_at else time.time(),
+                )
+                if uid not in self._notifications:
+                    self._notifications[uid] = []
+                self._notifications[uid].append(n)
+                self._counter = max(self._counter, r.id)
+
 
 _service: Optional[NotificationService] = None
 
@@ -136,4 +203,11 @@ def get_notification_service() -> NotificationService:
     global _service
     if _service is None:
         _service = NotificationService()
+    return _service
+
+
+def init_notification_service(session_factory: Optional[async_sessionmaker[AsyncSession]] = None) -> NotificationService:
+    """Initialize with DB persistence. Call once at startup."""
+    global _service
+    _service = NotificationService(session_factory=session_factory)
     return _service

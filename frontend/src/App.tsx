@@ -17,6 +17,14 @@ import { Integrations } from './pages/Integrations'
 import { Batch } from './pages/Batch'
 import { MeetingPrep } from './pages/MeetingPrep'
 import { KnowledgeGraph } from './pages/KnowledgeGraph'
+import { Annotations } from './pages/Annotations'
+import { ReviewQueue } from './pages/ReviewQueue'
+import { AuditLog } from './pages/AuditLog'
+import { DiffView } from './pages/DiffView'
+import { PatternMiner } from './pages/PatternMiner'
+import { LiveCopilot } from './pages/LiveCopilot'
+import { Admin } from './pages/Admin'
+import { SettingsPage } from './pages/SettingsPage'
 
 // Lazy-load Recharts-heavy Intelligence page to avoid headless/SSR crashes
 const Intelligence = lazy(() => import('./pages/Intelligence').then(m => ({ default: m.Intelligence })))
@@ -47,6 +55,14 @@ export default function App() {
           <Route path="/batch" element={<Batch />} />
           <Route path="/meeting-prep" element={<MeetingPrep />} />
           <Route path="/knowledge-graph" element={<KnowledgeGraph />} />
+          <Route path="/annotations" element={<Annotations />} />
+          <Route path="/review-queue" element={<ReviewQueue />} />
+          <Route path="/audit-log" element={<AuditLog />} />
+          <Route path="/diff" element={<DiffView />} />
+          <Route path="/patterns" element={<PatternMiner />} />
+          <Route path="/copilot" element={<LiveCopilot />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </Layout>
     </BrowserRouter>

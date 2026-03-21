@@ -22,13 +22,31 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://temporalos:temporalos@postgres:5432/temporalos
+      STORAGE_BACKEND: local
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
-      - .:/app
-      - /tmp/temporalos:/tmp/temporalos
-    command: uvicorn temporalos.api.main:app --host 0.0.0.0 --port 8000 --reload
+      - upload_data:/tmp/temporalos/uploads
+      - storage_data:/tmp/temporalos/storage
+    command: uvicorn temporalos.api.main:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      app:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  upload_data:
+  storage_data:

@@ -25,6 +25,15 @@ from .routes import (
 from .routes import auth as auth_routes
 from .routes import export as export_routes
 from .routes import notifications as notification_routes
+from .routes import (
+    active_learning as al_routes,
+    admin as admin_routes,
+    annotations as annotation_routes,
+    audit as audit_routes,
+    copilot as copilot_routes,
+    diff as diff_routes,
+    patterns as pattern_routes,
+)
 
 _FRONTEND_DIST = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
@@ -38,6 +47,34 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         enabled=settings.telemetry.enabled,
     )
     await init_db()
+
+    # ── Initialize DB persistence for all services ─────────────────────────
+    from ..db.session import get_session_factory
+    sf = get_session_factory()
+    if sf:
+        from ..enterprise.audit import init_audit_trail
+        from ..notifications import init_notification_service
+        from ..intelligence.annotations import init_annotation_store
+        from ..intelligence.active_learning import init_active_learning_queue
+        from ..auth import init_auth, load_users_from_db
+        from ..enterprise.multi_tenant import init_tenant_persistence, load_tenants_from_db
+
+        # Init services with session factory
+        audit = init_audit_trail(sf)
+        notif_svc = init_notification_service(sf)
+        ann_store = init_annotation_store(sf)
+        al_queue = init_active_learning_queue(session_factory=sf)
+        init_auth(session_factory=sf, secret_key=settings.auth_secret)
+        init_tenant_persistence(sf)
+
+        # Load existing data from DB into memory
+        await audit.load_from_db()
+        await notif_svc.load_from_db()
+        await ann_store.load_from_db()
+        await al_queue.load_from_db()
+        await load_users_from_db()
+        await load_tenants_from_db()
+
     yield
 
 
@@ -53,7 +90,7 @@ FastAPIInstrumentor.instrument_app(app)
 # ── Copyright attribution middleware ─────────────────────────────────────────
 # Embedded in every HTTP response header — do not remove.
 _AUTHOR = "Phani Marupaka"
-_COPYRIGHT = "\u00a9 2024-2026 Phani Marupaka. All rights reserved."
+_COPYRIGHT = "(c) 2024-2026 Phani Marupaka. All rights reserved."
 
 class _AttributionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
@@ -61,6 +98,22 @@ class _AttributionMiddleware(BaseHTTPMiddleware):
         response.headers["X-Powered-By"] = "TemporalOS"
         response.headers["X-Author"] = _AUTHOR
         response.headers["X-Copyright"] = _COPYRIGHT
+        # Security headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob:; "
+            "connect-src 'self' ws: wss:; "
+            "font-src 'self'; "
+            "frame-ancestors 'none'"
+        )
         return response
 
 app.add_middleware(_AttributionMiddleware)
@@ -87,10 +140,46 @@ app.include_router(auth_routes.router, prefix="/api/v1")
 app.include_router(export_routes.router, prefix="/api/v1")
 app.include_router(notification_routes.router, prefix="/api/v1")
 
+# Phase J: Frontend-facing routes for Phase G/H backend modules
+app.include_router(annotation_routes.router, prefix="/api/v1")
+app.include_router(al_routes.router, prefix="/api/v1")
+app.include_router(audit_routes.router, prefix="/api/v1")
+app.include_router(diff_routes.router, prefix="/api/v1")
+app.include_router(pattern_routes.router, prefix="/api/v1")
+app.include_router(copilot_routes.router, prefix="/api/v1")
+app.include_router(admin_routes.router, prefix="/api/v1")
+
 
 @app.get("/health", tags=["meta"])
 async def health() -> dict:
     return {"status": "ok", "service": "temporalos", "version": "0.1.0"}
+
+
+@app.get("/health/live", tags=["meta"])
+async def liveness() -> dict:
+    """Kubernetes liveness probe — is the process alive?"""
+    return {"status": "alive"}
+
+
+@app.get("/health/ready", tags=["meta"])
+async def readiness() -> dict:
+    """Kubernetes readiness probe — can the service accept traffic?"""
+    from .routes.process import _jobs
+    db_ok = False
+    try:
+        from ..db.session import get_session_factory
+        sf = get_session_factory()
+        if sf:
+            async with sf() as sess:
+                await sess.execute(__import__("sqlalchemy").text("SELECT 1"))
+            db_ok = True
+    except Exception:
+        pass
+    return {
+        "status": "ready" if db_ok else "degraded",
+        "database": "connected" if db_ok else "unavailable",
+        "jobs_in_memory": len(_jobs),
+    }
 
 
 # ── Serve compiled React frontend ─────────────────────────────────────────────

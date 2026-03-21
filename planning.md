@@ -384,6 +384,69 @@ and real enterprise readiness — in that order.**
 ---
 
 ### ✅ Phase H: Enterprise Scale & Polish — COMPLETE (53 tests passing)
+
+### ✅ Phase I: State Persistence & Data Integrity — COMPLETE (40 tests passing)
+
+### ✅ Phase J: Frontend Completion & Real UX — COMPLETE (36 tests passing)
+*Every backend module gets an API route. Every route gets a frontend page.*
+
+| # | Component | What it does |
+|---|-----------|-------------|
+| J1 | **7 API Route Files** | annotations, active_learning, audit, diff, patterns, copilot, admin — full CRUD/query routes |
+| J2 | **API Client Expansion** | ~200 lines of typed functions in client.ts for all new endpoints |
+| J3 | **8 New React Pages** | Annotations, ReviewQueue, AuditLog, DiffView, PatternMiner, LiveCopilot, Admin, SettingsPage |
+| J4 | **Navigation & Layout** | 8 new nav items, notification bell with dropdown, updated App.tsx routes |
+
+### ✅ Phase K: Real Integrations & Production Streaming — COMPLETE (31 tests passing)
+*Replace stubs with real implementations. Production-grade streaming and storage.*
+
+| # | Component | What it does |
+|---|-----------|-------------|
+| K1 | **Deepgram WebSocket ASR** | Real streaming transcription via Deepgram WebSocket SDK, word-level timestamps |
+| K2 | **Storage Abstraction** | StorageBackend ABC → LocalStorage (filesystem, path traversal protection) + S3Storage (boto3) |
+| K3 | **Config Consolidation** | StorageSettings, DeepgramSettings, IntegrationSettings in Pydantic settings |
+
+### ✅ Phase L: CI/CD, Security & Production Hardening — COMPLETE (18 tests passing)
+*Automated quality gates, security hardening, health probes.*
+
+| # | Component | What it does |
+|---|-----------|-------------|
+| L1 | **GitHub Actions CI** | 4 jobs: lint (ruff+mypy), test-backend (pytest+coverage), test-frontend (tsc), security (bandit) |
+| L2 | **Security Headers** | 8 headers on every response: HSTS, CSP, X-Frame-Options, X-Content-Type-Options, etc. |
+| L3 | **Health Probes** | /health/live (liveness), /health/ready (readiness + DB check) |
+| L4 | **Docker Compose** | 3 services (postgres, app, frontend) with health checks and named volumes |
+
+### ✅ Phase M: Documentation, SDK & Developer Experience — COMPLETE (27 tests passing)
+*Make the project accessible, documented, and SDK-ready.*
+
+| # | Component | What it does |
+|---|-----------|-------------|
+| M1 | **Python SDK** | Zero-dependency TemporalOSClient with 13 typed methods, dataclass results, error handling |
+| M2 | **Deployment Guide** | Docker, env vars, local dev, production (Nginx, probes), storage, monitoring |
+| M3 | **Architecture Docs** | System diagram, module map, all 28 routes, 25 pages, data flow, tech stack |
+| M4 | **API Reference** | All endpoints with request/response examples, auth guide, SDK usage |
+| M5 | **README** | Updated with Docker quickstart, SDK section, doc links, 688+ test count |
+*Fix the "everything in-memory" problem. Data survives restarts. Alembic migrations.*
+
+| # | Component | What it does |
+|---|-----------|-------------|
+| I1 | **Alembic Migrations** | Async template, 3 migrations (initial schema, annotations+review_items, user tier). `alembic upgrade head` applies all. |
+| I2 | **AnnotationRecord + ReviewItemRecord** | New DB models for annotations (uid, job_id, label, tags, resolved) and review queue (uid, confidence, status, corrected_extraction). |
+| I3 | **AuditTrail → DB** | async_log(), async_query(), load_from_db(). Write-through pattern: sync in-memory + async DB persist. |
+| I4 | **NotificationService → DB** | async_send(), async_mark_read(), load_from_db(). Notifications survive restart. |
+| I5 | **AnnotationStore → DB** | async_create/update/delete(), load_from_db(). All CRUD persisted. |
+| I6 | **ActiveLearningQueue → DB** | async_gate/approve/correct/reject(), load_from_db(). Review queue state persisted. |
+| I7 | **Auth → DB** | Stable AUTH_SECRET from env var. persist_user(), load_users_from_db(). Tokens survive restart. |
+| I8 | **Multi-Tenant → DB** | async_register_tenant(), load_tenants_from_db(). Tenant registry persisted. |
+| I9 | **App Startup Wiring** | lifespan init → get_session_factory → init all services → load_from_db for each. |
+
+**Architecture Pattern:** Write-through cache. Each service has:
+- `_sf`: Optional async session_factory (None = in-memory only, provided = DB persistence)
+- Sync methods: unchanged (backward compat, used by tests)
+- `async_*` methods: sync write + DB persist (used by production routes)
+- `load_from_db()`: populate in-memory cache at startup
+
+**Tests:** `test_phase_i_persistence.py` — 40 tests covering round-trips for all services.
 *Production-grade for enterprise deployment. Security, scale, compliance.*
 
 | # | Component | What it does |
@@ -441,3 +504,8 @@ and real enterprise readiness — in that order.**
 | 2026-03-21 | Phase H = Enterprise scale (multi-tenant, SSO, RBAC, PII, audit) | Production-grade for deployment. Security and compliance last because they need stable feature surface. |
 | 2026-03-21 | Honest assessment: Phases A-D were structure, not intelligence | All extraction/synthesis was rule-based. Must wire LLMs before claiming AI product. |
 | 2025-07-17 | Phases E/F/G/H fully implemented | 146 total tests across 4 phases. 26 new modules + Helm chart. LLM router, auth, enterprise features, competitive moats all working. |
+| 2025-07-18 | Phase I = State Persistence & Data Integrity | All in-memory stores (audit, notifications, annotations, active learning, auth, tenants) wired to async DB persistence. Alembic migrations. Stable AUTH_SECRET. 40 new tests, 603 total passing. |
+| 2025-07-19 | Phase J = Frontend Completion & Real UX | 7 new API routes, 8 new React pages, notification bell. 25 total pages, 28 API route modules. 36 tests passing. |
+| 2025-07-19 | Phase K = Real Integrations & Production Streaming | Deepgram WebSocket ASR adapter, S3/Local storage abstraction, config consolidation. 31 tests passing. |
+| 2025-07-19 | Phase L = CI/CD, Security & Production Hardening | GitHub Actions CI (4 jobs), security headers (8 headers), health probes, Docker Compose with 3 services. 18 tests passing. |
+| 2025-07-19 | Phase M = Documentation, SDK & Developer Experience | Python SDK (zero-dependency, 13 methods), deployment guide, architecture docs, API reference, README update. 27 tests passing. Total: 688+ tests. |

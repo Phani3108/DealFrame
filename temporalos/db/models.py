@@ -250,6 +250,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255))
     display_name: Mapped[str] = mapped_column(String(255), default="")
     role: Mapped[str] = mapped_column(String(50), default="analyst")  # admin | manager | analyst | viewer
+    tier: Mapped[str] = mapped_column(String(50), default="free")  # free | pro | enterprise
     tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     api_key: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
@@ -284,3 +285,40 @@ class Notification(Base):
     read: Mapped[bool] = mapped_column(Boolean, default=False)
     extra: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class AnnotationRecord(Base):
+    """Collaborative annotations on transcript segments."""
+    __tablename__ = "annotations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    uid: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    job_id: Mapped[str] = mapped_column(String(255), index=True)
+    user_id: Mapped[str] = mapped_column(String(255))
+    segment_index: Mapped[int] = mapped_column(Integer)
+    start_word: Mapped[int] = mapped_column(Integer)
+    end_word: Mapped[int] = mapped_column(Integer)
+    label: Mapped[str] = mapped_column(String(100), index=True)
+    comment: Mapped[str] = mapped_column(Text, default="")
+    tags: Mapped[dict] = mapped_column(JSON, default=list)
+    resolved: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ReviewItemRecord(Base):
+    """Active learning review queue items."""
+    __tablename__ = "review_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    uid: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    job_id: Mapped[str] = mapped_column(String(255), index=True)
+    segment_index: Mapped[int] = mapped_column(Integer)
+    extraction: Mapped[dict] = mapped_column(JSON, default=dict)
+    confidence: Mapped[float] = mapped_column(Float)
+    status: Mapped[str] = mapped_column(String(50), default="pending", index=True)
+    reviewer: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    corrected_extraction: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    review_notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

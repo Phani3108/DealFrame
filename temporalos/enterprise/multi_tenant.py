@@ -5,6 +5,7 @@ Provides:
 - Request-scoped tenant context
 - Tenant-aware DB query helpers
 - Tenant isolation enforcement
+- DB persistence via optional session_factory
 """
 from __future__ import annotations
 
@@ -12,6 +13,9 @@ import logging
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +64,9 @@ def require_tenant() -> TenantContext:
     return ctx
 
 
-# In-memory tenant registry (production would use DB)
+# In-memory tenant registry (populated from DB at startup when available)
 _tenants: Dict[str, TenantContext] = {}
+_tenant_sf: Optional[async_sessionmaker[AsyncSession]] = None
 
 
 def register_tenant(tenant_id: str, slug: str, plan: str = "free",
@@ -76,6 +81,24 @@ def register_tenant(tenant_id: str, slug: str, plan: str = "free",
         settings=settings or {},
     )
     _tenants[tenant_id] = ctx
+    return ctx
+
+
+async def async_register_tenant(tenant_id: str, slug: str, plan: str = "free",
+                                settings: Optional[Dict[str, Any]] = None) -> TenantContext:
+    """Register with DB persistence."""
+    ctx = register_tenant(tenant_id, slug, plan, settings)
+    if _tenant_sf:
+        from ..db.models import Tenant as TenantModel
+        async with _tenant_sf() as session:
+            existing = (await session.execute(
+                select(TenantModel).where(TenantModel.slug == slug)
+            )).scalar_one_or_none()
+            if not existing:
+                session.add(TenantModel(
+                    name=slug, slug=slug, plan=plan, settings=settings or {},
+                ))
+                await session.commit()
     return ctx
 
 
@@ -148,3 +171,29 @@ class TenantMiddleware:
             set_tenant(tenant_ctx)
 
         await self.app(scope, receive, send)
+
+
+# ── DB persistence helpers ────────────────────────────────────────────────────
+
+def init_tenant_persistence(session_factory: Optional[async_sessionmaker[AsyncSession]] = None) -> None:
+    """Set the session factory for tenant DB persistence."""
+    global _tenant_sf
+    _tenant_sf = session_factory
+
+
+async def load_tenants_from_db() -> None:
+    """Load tenants from DB into memory at startup."""
+    if not _tenant_sf:
+        return
+    from ..db.models import Tenant as TenantModel
+    async with _tenant_sf() as session:
+        rows = (await session.execute(select(TenantModel))).scalars().all()
+        for r in rows:
+            tid = str(r.id)
+            if tid not in _tenants:
+                _tenants[tid] = TenantContext(
+                    tenant_id=tid,
+                    tenant_slug=r.slug,
+                    plan=r.plan or "free",
+                    settings=r.settings or {},
+                )
