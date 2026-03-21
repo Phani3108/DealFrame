@@ -19,6 +19,36 @@
 
 ## Active Tasks
 
+### TASK-014: Frontend UI/UX Overhaul
+- **Status**: 🟢 Completed
+- **Date**: 2026-06-12
+- **Prompt/Trigger**: User: "frontend needs to be improved by miles, UI / UX are a big let down at the moment"
+- **Work Done**:
+  - Established a comprehensive design system in `index.css` — CSS custom properties, utility classes (`btn-primary`, `btn-secondary`, `btn-ghost`, `page-title`, `page-subtitle`, `card`, `input-base`), `animate-fade-in` keyframe animation, Inter font
+  - Redesigned `Layout.tsx` — dark `bg-slate-900` sidebar with indigo gradient logo icon, grouped nav with uppercase labels, active/hover states adhering to new palette
+  - Redesigned `StatCard.tsx`, `Badge.tsx`, `SegmentCard.tsx` — new visual language for all shared components
+  - Full page redesigns: `Dashboard.tsx` (gradient hero banner, stat cards, recent jobs, top objections, quick actions), `Upload.tsx` (drag-drop zone with animated states, mode cards, vision toggle, pipeline progress stepper)
+  - Design-system consistency pass across all remaining pages: added `animate-fade-in` to `Observatory.tsx`, `Intelligence.tsx`, `Finetuning.tsx`, `LocalPipeline.tsx`, `Results.tsx`
+  - Converted inline styles to design system classes in `Observability.tsx`, `Search.tsx`, `Streaming.tsx` — `page-title`/`page-subtitle` headings, `btn-primary`/`btn-secondary` buttons, `input-base` inputs
+  - Build: `npm run build` → 0 TypeScript errors, clean Vite production build ✅
+  - Backend: `python -m pytest tests/ -q` → **327 passed** ✅
+- **Files Changed**:
+  - `frontend/src/index.css` — Full design system rewrite
+  - `frontend/src/components/Layout.tsx` — Dark sidebar redesign
+  - `frontend/src/components/StatCard.tsx` — Redesigned
+  - `frontend/src/components/Badge.tsx` — Dot indicators
+  - `frontend/src/components/SegmentCard.tsx` — Redesigned
+  - `frontend/src/pages/Dashboard.tsx` — Full redesign with gradient hero
+  - `frontend/src/pages/Upload.tsx` — Redesigned drag-drop + progress
+  - `frontend/src/pages/Results.tsx` — animate-fade-in + polish
+  - `frontend/src/pages/Observatory.tsx` — animate-fade-in
+  - `frontend/src/pages/Intelligence.tsx` — animate-fade-in
+  - `frontend/src/pages/Finetuning.tsx` — animate-fade-in
+  - `frontend/src/pages/LocalPipeline.tsx` — animate-fade-in
+  - `frontend/src/pages/Observability.tsx` — design system classes
+  - `frontend/src/pages/Search.tsx` — design system classes
+  - `frontend/src/pages/Streaming.tsx` — design system classes
+
 ### TASK-013: Phase 10 — Search & Portfolio Insights
 - **Status**: 🟢 Completed
 - **Date**: 2026-06-11
@@ -346,3 +376,4 @@
 | TASK-011 | Phase 8 — Streaming Pipeline | 🟢 | 2026-06-11 |
 | TASK-012 | Phase 9 — Scene Intelligence & Vision Pipeline | 🟢 | 2026-06-11 |
 | TASK-013 | Phase 10 — Search & Portfolio Insights | 🟢 | 2026-06-11 |
+| TASK-014 | Frontend UI/UX Overhaul | 🟢 | 2026-06-12 |

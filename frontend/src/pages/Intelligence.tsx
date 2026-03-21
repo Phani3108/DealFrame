@@ -62,7 +62,7 @@ export function Intelligence() {
   const isEmpty = objections.length === 0 && !riskSummary
 
   return (
-    <div className="p-8">
+    <div className="p-8 animate-fade-in">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="page-title">Intelligence</h1>

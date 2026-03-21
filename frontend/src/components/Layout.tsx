@@ -51,26 +51,26 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0 shadow-sm">
+      {/* Dark Sidebar */}
+      <aside className="w-60 bg-[#0a0f1e] flex flex-col flex-shrink-0">
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-slate-100">
+        <div className="px-5 py-5 border-b border-white/[0.06]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow-sm">
+            <div className="w-9 h-9 bg-gradient-to-br from-indigo-400 via-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-900/50 flex-shrink-0">
               <Activity className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="font-bold text-slate-900 text-sm leading-tight tracking-tight">TemporalOS</p>
-              <p className="text-xs text-slate-400 leading-tight">Decision Intelligence</p>
+              <p className="font-bold text-white text-sm leading-tight tracking-tight">TemporalOS</p>
+              <p className="text-[10px] text-slate-500 leading-tight mt-0.5">Decision Intelligence</p>
             </div>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-3 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 overflow-y-auto">
           {navGroups.map(({ label, items }) => (
             <div key={label} className="mb-5">
-              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+              <p className="px-2.5 mb-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">
                 {label}
               </p>
               <div className="space-y-0.5">
@@ -80,10 +80,10 @@ export function Layout({ children }: LayoutProps) {
                     to={to}
                     end={to === '/'}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                      `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                         isActive
-                          ? 'bg-indigo-50 text-indigo-700 shadow-sm'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                          ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/25 shadow-sm'
+                          : 'text-slate-400 hover:bg-white/[0.05] hover:text-slate-200'
                       }`
                     }
                   >
@@ -97,17 +97,16 @@ export function Layout({ children }: LayoutProps) {
         </nav>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-slate-100">
+        <div className="px-4 py-4 border-t border-white/[0.06]">
           <a
             href="/docs"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-600 transition-colors"
+            className="flex items-center gap-1 text-xs text-slate-600 hover:text-indigo-400 transition-colors w-fit"
           >
-            <span>API Docs</span>
-            <span className="text-slate-300">↗</span>
+            API Docs ↗
           </a>
-          <p className="text-xs text-slate-300 mt-1">v0.1.0 · 10 Phases</p>
+          <p className="text-[10px] text-slate-700 mt-1.5">v0.1.0 · 10 Phases</p>
         </div>
       </aside>
 

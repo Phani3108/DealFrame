@@ -124,13 +124,11 @@ export function Search() {
   }
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-8 max-w-5xl animate-fade-in">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Search</h1>
-        <p className="text-slate-500 mt-1 text-sm">
-          Full-text + filtered search across all processed video segments
-        </p>
+        <h1 className="page-title">Search</h1>
+        <p className="page-subtitle">Full-text + filtered search across all processed video segments</p>
       </div>
 
       {/* Search form */}
@@ -143,7 +141,7 @@ export function Search() {
               placeholder='e.g. "pricing concern" or "competitor mention"'
               value={query}
               onChange={e => setQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder:text-slate-400"
+              className="w-full pl-10 pr-4 py-3 input-base text-sm placeholder:text-slate-400"
             />
           </div>
           <select
@@ -158,7 +156,7 @@ export function Search() {
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm"
+            className="btn-primary px-6"
           >
             {loading ? 'Searching…' : 'Search'}
           </button>

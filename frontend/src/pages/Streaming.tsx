@@ -151,24 +151,22 @@ export function Streaming() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-8 max-w-6xl animate-fade-in">
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Radio className="w-6 h-6 text-indigo-600" />
+          <h1 className="page-title flex items-center gap-2">
+            <Radio className="w-5 h-5 text-indigo-600" />
             Live Streaming
           </h1>
-          <p className="text-slate-500 mt-1 text-sm">
-            Real-time audio transcription and extraction via WebSocket
-          </p>
+          <p className="page-subtitle">Real-time audio transcription and extraction via WebSocket</p>
         </div>
         <div className="flex items-center gap-3">
           <ConnectionBadge state={state} />
           {state === 'disconnected' || state === 'error' ? (
             <button
               onClick={connect}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors"
+              className="btn-primary flex items-center gap-2"
             >
               <Wifi className="w-4 h-4" />
               Connect
@@ -178,7 +176,7 @@ export function Streaming() {
               <button
                 onClick={sendDemoAudio}
                 disabled={state !== 'live'}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-indigo-300 text-indigo-700 rounded-xl text-sm font-semibold hover:bg-indigo-50 disabled:opacity-40 transition-colors"
+                className="btn-secondary flex items-center gap-2 disabled:opacity-40"
               >
                 <Mic className="w-4 h-4" />
                 Send Demo Audio
