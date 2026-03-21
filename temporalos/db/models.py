@@ -3,7 +3,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -144,3 +144,143 @@ class PortfolioVideo(Base):
         "Portfolio", back_populates="portfolio_videos"
     )
     video: Mapped["Video"] = relationship("Video")
+
+
+# ── Phase E: Persistent State Layer ────────────────────────────────────────────
+
+class RiskEvent(Base):
+    """Persisted risk alert/event from the risk agent."""
+    __tablename__ = "risk_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    company: Mapped[str] = mapped_column(String(255), index=True)
+    deal_id: Mapped[str] = mapped_column(String(255), index=True, default="")
+    job_id: Mapped[str] = mapped_column(String(255), index=True)
+    alert_type: Mapped[str] = mapped_column(String(100))  # threshold | spike | persist
+    risk_score: Mapped[float] = mapped_column(Float)
+    message: Mapped[str] = mapped_column(String(2048))
+    acknowledged: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class KGNodeRecord(Base):
+    """Persisted knowledge graph node."""
+    __tablename__ = "kg_nodes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    node_id: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    entity_type: Mapped[str] = mapped_column(String(100), index=True)
+    label: Mapped[str] = mapped_column(String(255))
+    frequency: Mapped[int] = mapped_column(Integer, default=0)
+    jobs: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
+class KGEdgeRecord(Base):
+    """Persisted knowledge graph edge."""
+    __tablename__ = "kg_edges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source: Mapped[str] = mapped_column(String(255), index=True)
+    target: Mapped[str] = mapped_column(String(255), index=True)
+    weight: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SummaryCache(Base):
+    """Cached generated summaries."""
+    __tablename__ = "summary_cache"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    job_id: Mapped[str] = mapped_column(String(255), index=True)
+    summary_type: Mapped[str] = mapped_column(String(100), index=True)
+    content: Mapped[str] = mapped_column(Text)
+    model: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class CoachingRecord(Base):
+    """Persisted coaching history per rep."""
+    __tablename__ = "coaching_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    rep_id: Mapped[str] = mapped_column(String(255), index=True)
+    calls_analyzed: Mapped[int] = mapped_column(Integer)
+    overall_score: Mapped[float] = mapped_column(Float)
+    grade: Mapped[str] = mapped_column(String(5))
+    dimensions: Mapped[list] = mapped_column(JSON, default=list)
+    narrative: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class SpeakerLabel(Base):
+    """Manual speaker label mapping: SPEAKER_A → 'John Smith'."""
+    __tablename__ = "speaker_labels"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    video_id: Mapped[int] = mapped_column(ForeignKey("videos.id"), index=True)
+    speaker_tag: Mapped[str] = mapped_column(String(50))  # SPEAKER_A
+    speaker_name: Mapped[str] = mapped_column(String(255))  # John Smith
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+# ── Phase H: Enterprise Models ─────────────────────────────────────────────────
+
+class Tenant(Base):
+    """Multi-tenant isolation."""
+    __tablename__ = "tenants"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True)
+    slug: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    plan: Mapped[str] = mapped_column(String(50), default="free")  # free | pro | enterprise
+    settings: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class User(Base):
+    """User accounts with auth."""
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column(String(255))
+    display_name: Mapped[str] = mapped_column(String(255), default="")
+    role: Mapped[str] = mapped_column(String(50), default="analyst")  # admin | manager | analyst | viewer
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    api_key: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class AuditLog(Base):
+    """Immutable audit trail for all user actions."""
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), nullable=True)
+    action: Mapped[str] = mapped_column(String(100), index=True)  # upload | view | export | settings
+    resource_type: Mapped[str] = mapped_column(String(100))  # video | report | setting
+    resource_id: Mapped[str] = mapped_column(String(255))
+    details: Mapped[dict] = mapped_column(JSON, default=dict)
+    ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Notification(Base):
+    """User notification entries."""
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    tenant_id: Mapped[int | None] = mapped_column(ForeignKey("tenants.id"), nullable=True)
+    type: Mapped[str] = mapped_column(String(100))  # risk_alert | batch_complete | drift | digest
+    title: Mapped[str] = mapped_column(String(255))
+    message: Mapped[str] = mapped_column(Text)
+    read: Mapped[bool] = mapped_column(Boolean, default=False)
+    extra: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

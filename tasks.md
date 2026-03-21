@@ -19,6 +19,89 @@
 
 ## Active Tasks
 
+### TASK-019: Phase H — Enterprise Scale (10 modules + 53 tests)
+- **Status**: 🟢 Completed
+- **Date**: 2025-07-17
+- **Prompt/Trigger**: User: "Implement the next 4 phases completely - deep plan"
+- **Work Done**:
+  - `temporalos/enterprise/multi_tenant.py` — TenantContext, TenantMiddleware (ASGI), context vars, register/get/filter helpers, plan limits
+  - `temporalos/enterprise/sso.py` — Google, Microsoft, Okta OAuth2 adapters with authorize_url(), parse_userinfo(), SSOUser dataclass
+  - `temporalos/enterprise/rbac.py` — 4 roles (admin/manager/analyst/viewer), 15 permissions, has_permission/check_permission, custom RBACPolicy per-tenant
+  - `temporalos/enterprise/task_queue.py` — In-memory task queue with priority ordering, handler registration, process_all, cancel, metrics
+  - `temporalos/enterprise/pii_redaction.py` — Detect/redact email, phone, SSN, credit card, IP. redact_text/mask_text/redact_intel
+  - `temporalos/enterprise/audit.py` — AuditTrail with log/query/count/clear, AuditEntry dataclass
+  - `temporalos/enterprise/performance.py` — TTLCache with eviction, @cached decorator, batch_process, cache_key
+  - `helm/temporalos/` — Chart.yaml, values.yaml, templates/deployment.yaml (K8s manifests)
+  - `tests/e2e/test_phase_h_enterprise.py` — **53 tests, ALL PASSING**
+- **Files Changed**: 8 new modules + 3 Helm files + 1 test file
+
+### TASK-018: Phase G — Competitive Moats (8 modules + 41 tests)
+- **Status**: 🟢 Completed
+- **Date**: 2025-07-17
+- **Prompt/Trigger**: User: "Implement the next 4 phases completely - deep plan"
+- **Work Done**:
+  - `temporalos/intelligence/diff_engine.py` — Temporal Diff Engine: semantic call-to-call comparison (objections, topics, risk, sentiment, signals)
+  - `temporalos/intelligence/franchise.py` — Franchise Mode: auto-classify vertical (7 verticals) with keyword scoring + schema mapping
+  - `temporalos/intelligence/pattern_miner.py` — Cross-Call Pattern Mining: objection-risk, topic-risk, rep performance, behavioral patterns
+  - `temporalos/intelligence/copilot.py` — Live Call Copilot: battlecards, risk warnings, objection alerts, closing prompts, pace alerts
+  - `temporalos/intelligence/visual_intel.py` — Visual Intelligence: pricing page, competitor, org chart detection from OCR text
+  - `temporalos/intelligence/annotations.py` — Collaborative Annotations: CRUD store, label validation, training data export
+  - `temporalos/intelligence/clip_reels.py` — Smart Clip Reels: auto-curate highlights by category (objection, competitor, decision, topic)
+  - `temporalos/intelligence/active_learning.py` — Active Learning: confidence gating, review queue, approve/correct/reject, training data export
+  - `tests/e2e/test_phase_g_moats.py` — **41 tests, ALL PASSING**
+- **Files Changed**: 8 new modules + 1 test file
+
+### TASK-017: Phase F — Real-World Workflows (10 modules + 25 tests)
+- **Status**: 🟢 Completed
+- **Date**: 2025-07-17
+- **Prompt/Trigger**: User: "Implement the next 4 phases completely - deep plan"
+- **Work Done**:
+  - `scripts/seed_demo.py` — Demo seed generator: 5 companies, 8 reps, ~20 calls with deterministic data
+  - `temporalos/auth/__init__.py` — JWT auth: register/login/refresh, PBKDF2 password hashing, API keys, rate limiting
+  - `temporalos/api/routes/auth.py` — Auth API routes
+  - `temporalos/integrations/zoom_oauth.py` — Full Zoom OAuth2 flow + webhook verification + recording download
+  - `temporalos/integrations/slack_oauth.py` — Slack OAuth2 install flow + slash commands (/tos search, risk, help, status)
+  - `temporalos/export/__init__.py` — Export engine: JSON, CSV, Markdown, HTML report formats
+  - `temporalos/notifications/__init__.py` — Notification service with event shortcuts (risk_alert, batch_complete, drift)
+  - `temporalos/api/routes/export.py` + `notifications.py` — API routes registered in main.py
+  - `tests/e2e/test_phase_f_workflows.py` — **25 tests, ALL PASSING**
+- **Files Changed**: 10 new modules + 1 test file
+
+### TASK-016: Phase E — AI-Native Core (9 modules + 27 tests)
+- **Status**: 🟢 Completed
+- **Date**: 2025-07-17
+- **Prompt/Trigger**: User: "Implement the next 4 phases completely - deep plan"
+- **Work Done**:
+  - `temporalos/llm/router.py` — Full LLM abstraction: OpenAI, Anthropic, Ollama, Mock providers with complete/stream/json
+  - `temporalos/extraction/router.py` — LLM-powered extraction replacing rule-based
+  - `temporalos/agents/semantic_store.py` — Embedding vector store (sentence-transformers/OpenAI/TF-IDF) with SQLite persistence
+  - `temporalos/summarization/ai_engine.py` — AI summarization with 8 templates (executive, action_items, meeting_notes, etc.)
+  - `temporalos/agents/rag_qa.py` — RAG Q&A agent with semantic retrieval + LLM synthesis
+  - `temporalos/agents/smart_coaching.py` — LLM coaching narratives wrapping existing scoring
+  - `temporalos/agents/ner_graph.py` — LLM-based NER entity extraction for knowledge graph
+  - `temporalos/agents/ai_meeting_prep.py` — AI-enhanced meeting prep briefs
+  - `temporalos/db/models.py` — 10 new DB models (RiskEvent, KGNode, SummaryCache, Tenant, User, AuditLog, etc.)
+  - `temporalos/diarization/diarizer.py` — PyAnnoteDiarizer with full pyannote-audio support
+  - `tests/e2e/test_phase_e_ai_core.py` — **27 tests, ALL PASSING**
+- **Files Changed**: 9 new modules + 2 modified + 1 test file
+
+### TASK-015: Deep Planning — Next 4 Phases (E/F/G/H)
+- **Status**: 🟢 Completed
+- **Date**: 2026-03-21
+- **Prompt/Trigger**: User: "Let's plan the next 4 phases. Give proper tasks lists... deep planning, feature wise depth, value addition - something unique in the market, and enterprise grade"
+- **Work Done**:
+  - Conducted full inventory of all 19 advanced modules — assessed each as REAL (14), PARTIAL (3), or STUB (2)
+  - Identified critical gap: all extraction/synthesis is rule-based, no LLM wired in
+  - Designed 4 new phases with 37 total deliverables:
+    - **Phase E: AI-Native Core** (9 tasks) — Wire real LLMs into extraction, summarization, Q&A, coaching, KG, meeting prep. Semantic vector store. Persistent state layer. pyannote diarization.
+    - **Phase F: Real-World Workflows** (10 tasks) — Demo seed data, onboarding wizard, JWT auth, Dashboard/Results/Analytics redesign, working Zoom + Slack OAuth, export engine, notifications.
+    - **Phase G: Competitive Moats** (8 tasks) — Temporal diff engine, franchise mode (auto-detect vertical), cross-call pattern mining, live call copilot, visual intelligence, collaborative annotations, smart clip reels, active learning loop.
+    - **Phase H: Enterprise Scale** (10 tasks) — Multi-tenant, SSO/SAML, RBAC, Celery/Temporal queue, PII redaction, audit trail, Helm chart, performance optimization, comprehensive tests, documentation site.
+  - Updated `planning.md` with full phase specs, honest assessment section, and decision log
+- **Files Changed**:
+  - `planning.md` — Full rewrite of Phase A-E sections (now marked as done) + new Phases E/F/G/H with detailed task tables
+- **Notes**: Key insight — Phases A-D delivered structure/skeleton, not intelligence. Phase E must come first to make the product genuinely AI-powered before any UX/enterprise work.
+
 ### TASK-014: Frontend UI/UX Overhaul
 - **Status**: 🟢 Completed
 - **Date**: 2026-06-12

@@ -22,6 +22,9 @@ from .routes import (
 from .routes import (
     agents, batch, clips, diarization, integrations, schemas, summaries, webhooks,
 )
+from .routes import auth as auth_routes
+from .routes import export as export_routes
+from .routes import notifications as notification_routes
 
 _FRONTEND_DIST = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
@@ -80,6 +83,9 @@ app.include_router(webhooks.router, prefix="/api/v1")
 app.include_router(integrations.router, prefix="/api/v1")
 app.include_router(agents.router, prefix="/api/v1")
 app.include_router(batch.router, prefix="/api/v1")
+app.include_router(auth_routes.router, prefix="/api/v1")
+app.include_router(export_routes.router, prefix="/api/v1")
+app.include_router(notification_routes.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["meta"])

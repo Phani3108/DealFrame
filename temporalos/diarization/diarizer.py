@@ -5,10 +5,13 @@ Lazy-imports pyannote.audio when available for production-grade diarization.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
-from typing import List
+from typing import Dict, List, Optional
 
 from temporalos.core.types import Word
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -83,11 +86,104 @@ class MockDiarizer:
         return segs
 
 
-def get_diarizer(pause_threshold_ms: int = 1500) -> MockDiarizer:
-    """Factory — falls back to MockDiarizer if pyannote unavailable."""
-    try:
-        from pyannote.audio import Pipeline  # noqa: F401
-        # Swap with PyAnnoteDiarizer when pyannote credentials are configured
-        return MockDiarizer(pause_threshold_ms=pause_threshold_ms)
-    except ImportError:
-        return MockDiarizer(pause_threshold_ms=pause_threshold_ms)
+class PyAnnoteDiarizer:
+    """Production-grade speaker diarization using pyannote-audio.
+
+    Requires: pip install pyannote-audio torch
+    And a Hugging Face token with access to pyannote/speaker-diarization-3.1.
+    """
+
+    def __init__(self, hf_token: Optional[str] = None, num_speakers: Optional[int] = None):
+        self._hf_token = hf_token
+        self._num_speakers = num_speakers
+        self._pipeline = None
+
+    def _get_pipeline(self):
+        if self._pipeline is None:
+            from pyannote.audio import Pipeline
+            self._pipeline = Pipeline.from_pretrained(
+                "pyannote/speaker-diarization-3.1",
+                use_auth_token=self._hf_token,
+            )
+        return self._pipeline
+
+    def diarize_audio(self, audio_path: str) -> List[DiarizationSegment]:
+        """Run pyannote diarization on an audio file."""
+        pipeline = self._get_pipeline()
+        kwargs = {}
+        if self._num_speakers:
+            kwargs["num_speakers"] = self._num_speakers
+        diarization = pipeline(audio_path, **kwargs)
+
+        segments: List[DiarizationSegment] = []
+        for turn, _, speaker in diarization.itertracks(yield_label=True):
+            segments.append(DiarizationSegment(
+                speaker=speaker,
+                start_ms=int(turn.start * 1000),
+                end_ms=int(turn.end * 1000),
+            ))
+        return segments
+
+    def apply_to_words(self, words: List[Word], audio_path: str) -> List[Word]:
+        """Assign speaker labels to words based on pyannote segments."""
+        segments = self.diarize_audio(audio_path)
+        if not segments:
+            return words
+
+        # Map speaker IDs to consistent labels
+        speaker_map: Dict[str, str] = {}
+        idx = 0
+        for seg in segments:
+            if seg.speaker not in speaker_map:
+                speaker_map[seg.speaker] = f"SPEAKER_{chr(65 + idx)}"
+                idx = min(idx + 1, 25)  # cap at 26 speakers
+
+        result: List[Word] = []
+        for w in words:
+            mid = (w.start_ms + w.end_ms) // 2
+            speaker = "SPEAKER_A"  # default
+            for seg in segments:
+                if seg.start_ms <= mid <= seg.end_ms:
+                    speaker = speaker_map.get(seg.speaker, seg.speaker)
+                    break
+            result.append(Word(
+                text=w.text, start_ms=w.start_ms, end_ms=w.end_ms,
+                speaker=speaker,
+            ))
+        return result
+
+    def get_segments(self, words: List[Word]) -> List[DiarizationSegment]:
+        """Get speaker segments from already-labeled words."""
+        if not words:
+            return []
+        segs: List[DiarizationSegment] = []
+        cur_speaker = words[0].speaker or "SPEAKER_A"
+        cur_start = words[0].start_ms
+        cur_end = words[0].end_ms
+
+        for w in words[1:]:
+            speaker = w.speaker or cur_speaker
+            if speaker != cur_speaker:
+                segs.append(DiarizationSegment(cur_speaker, cur_start, cur_end))
+                cur_speaker = speaker
+                cur_start = w.start_ms
+            cur_end = w.end_ms
+
+        segs.append(DiarizationSegment(cur_speaker, cur_start, cur_end))
+        return segs
+
+
+def get_diarizer(
+    pause_threshold_ms: int = 1500,
+    use_pyannote: bool = False,
+    hf_token: Optional[str] = None,
+    num_speakers: Optional[int] = None,
+) -> MockDiarizer | PyAnnoteDiarizer:
+    """Factory — uses PyAnnoteDiarizer if pyannote is available and requested."""
+    if use_pyannote:
+        try:
+            from pyannote.audio import Pipeline  # noqa: F401
+            return PyAnnoteDiarizer(hf_token=hf_token, num_speakers=num_speakers)
+        except ImportError:
+            logger.warning("pyannote-audio not installed, falling back to heuristic diarizer")
+    return MockDiarizer(pause_threshold_ms=pause_threshold_ms)
