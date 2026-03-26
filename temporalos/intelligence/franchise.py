@@ -47,6 +47,13 @@ VERTICAL_KEYWORDS: Dict[str, List[str]] = {
         "candidate", "resume", "experience", "strengths", "weaknesses",
         "team fit", "salary expectations", "notice period", "background check",
     ],
+    "procurement": [
+        "supplier", "vendor", "rfp", "sourcing", "procurement",
+        "tender", "bid", "contract terms", "payment terms", "net 30",
+        "net 60", "sla", "lead time", "per unit", "volume discount",
+        "concession", "compliance", "audit", "total cost",
+        "maverick spend", "category management", "spend analysis",
+    ],
 }
 
 # Schema fields per vertical
@@ -70,6 +77,12 @@ VERTICAL_SCHEMAS: Dict[str, Dict[str, str]] = {
         "property_type": "string", "budget_range": "string",
         "preferences": "list[str]", "objections_to_property": "list[str]",
         "showing_feedback": "string", "next_showing": "string",
+    },
+    "procurement": {
+        "negotiation_stage": "string", "commitment_strength": "string",
+        "pricing_signals": "list[str]", "concessions_offered": "list[str]",
+        "supplier_risk_score": "float", "clause_objections": "list[str]",
+        "compliance_mentions": "list[str]", "sla_commitments_discussed": "bool",
     },
     "general": {
         "topic": "string", "sentiment": "string",

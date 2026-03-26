@@ -19,6 +19,40 @@
 
 ## Active Tasks
 
+### TASK-028: Procurement Vertical — Jaggaer S2P Integration (33 tests)
+- **Status**: 🟢 Completed
+- **Date**: 2026-03-26
+- **Prompt/Trigger**: User: "I want to try for Jaggaer — give me a direction. Let's go with Option B (apply for role, use TemporalOS as portfolio piece)"
+- **Work Done**:
+  - **Strategic analysis**: Researched Jaggaer (S2P platform), identified procurement conversation intelligence as the missing capability across all S2P platforms (Jaggaer, Coupa, SAP Ariba, GEP, Ivalua, etc.)
+  - **ProcurementPack vertical** (`temporalos/verticals/procurement.py`): 270-line vertical pack with 19 schema fields and keyword-based extraction covering:
+    - Pricing signals (regex: $X.XX/unit, volume discounts, per-unit costs)
+    - Concession tracking (15 concession patterns)
+    - Commitment strength analysis (strong vs weak language classification)
+    - Supplier risk scoring (delivery risk, financial risk, composite score)
+    - Compliance/ESG detection (ISO, SOC2, GDPR, carbon, sustainability)
+    - SLA commitment tracking
+    - Negotiation stage inference (RFP review → initial offer → counter → final → verbal agreement)
+    - Contract clause objection detection (auto-renewal, liability, payment terms, IP)
+    - TCO (total cost of ownership) signal extraction
+    - Maverick spend risk detection
+    - Alternative supplier / competing bid signals
+  - **Franchise auto-detection**: Added 22 procurement keywords to classify_vertical() + procurement schema to VERTICAL_SCHEMAS
+  - **Frontend wiring**: Added "Procurement" option to Upload, Batch, and SchemaBuilder vertical dropdowns
+  - **Demo script** (`scripts/demo_procurement.py`): 14-segment synthetic supplier negotiation between buyer (Maria, Category Mgr) and supplier (James, Account Exec) covering pricing, delivery risk, contract clauses, ESG compliance, TCO, and verbal agreement. Generates MP4 + exportable transcript. Includes Jaggaer name-drop.
+  - **E2E tests** (`tests/e2e/test_procurement_vertical.py`): **33 tests, ALL PASSING**
+    - Schema tests (7): field validation, procurement-specific fields, topic categories
+    - Extraction tests (14): pricing, concessions, commitment strength, delivery risk, compliance, SLA, negotiation stage, clause objections, TCO, alternative suppliers, maverick spend (positive + negative)
+    - Franchise detection tests (4): keyword existence, schema existence, auto-classification, negative case
+    - Registry tests (3): registration, listing, total count
+    - Metadata tests (3): Jaggaer industries coverage, summary type, S2P mention
+    - Pipeline integration tests (3): enrichment, empty handling, field completeness
+  - **Updated existing tests**: Fixed test_phase_d_verticals.py to expect 5 verticals (was 4)
+  - **Full suite**: 786 passed (up from 753), 16 pre-existing failures, 0 regressions
+- **Files Changed**: 
+  - New: `temporalos/verticals/procurement.py`, `scripts/demo_procurement.py`, `tests/e2e/test_procurement_vertical.py`
+  - Modified: `temporalos/verticals/__init__.py`, `temporalos/intelligence/franchise.py`, `frontend/src/pages/Upload.tsx`, `frontend/src/pages/Batch.tsx`, `frontend/src/pages/SchemaBuilder.tsx`, `tests/e2e/test_phase_d_verticals.py`
+
 ### TASK-027: Audit Gap Fixes — Production Readiness (38 tests)
 - **Status**: 🟢 Completed
 - **Date**: 2025-07-21

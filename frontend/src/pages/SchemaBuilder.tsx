@@ -21,7 +21,7 @@ interface Schema {
 }
 
 const FIELD_TYPES = ['string', 'category', 'boolean', 'number', 'list_string', 'list_category']
-const VERTICALS = ['', 'sales', 'ux_research', 'customer_success', 'real_estate', 'legal', 'custom']
+const VERTICALS = ['', 'sales', 'procurement', 'ux_research', 'customer_success', 'real_estate', 'legal', 'custom']
 
 function FieldEditor({
   field, onChange, onRemove,

@@ -244,7 +244,7 @@ class TestVerticalRegistry:
     def test_all_packs_registered(self):
         from temporalos.verticals import get_default_vertical_registry
         registry = get_default_vertical_registry()
-        expected = {"sales", "ux_research", "customer_success", "real_estate"}
+        expected = {"sales", "ux_research", "customer_success", "real_estate", "procurement"}
         registered = set(registry.list_ids())
         assert expected == registered
 
@@ -252,7 +252,7 @@ class TestVerticalRegistry:
         from temporalos.verticals import get_default_vertical_registry
         registry = get_default_vertical_registry()
         packs = registry.list_packs()
-        assert len(packs) == 4
+        assert len(packs) == 5
 
     def test_get_unknown_returns_none(self):
         from temporalos.verticals import get_default_vertical_registry

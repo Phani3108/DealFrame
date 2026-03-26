@@ -4,7 +4,7 @@ import {
   AlertCircle, ChevronRight, Plus, Trash2,
 } from 'lucide-react'
 
-const VERTICALS = ['', 'sales', 'ux_research', 'customer_success', 'real_estate']
+const VERTICALS = ['', 'sales', 'procurement', 'ux_research', 'customer_success', 'real_estate']
 
 interface BatchItem {
   item_id: string

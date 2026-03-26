@@ -253,6 +253,7 @@ export function Upload() {
                   >
                     <option value="">— Default —</option>
                     <option value="sales">Sales</option>
+                    <option value="procurement">Procurement</option>
                     <option value="ux_research">UX Research</option>
                     <option value="customer_success">Customer Success</option>
                     <option value="real_estate">Real Estate</option>
