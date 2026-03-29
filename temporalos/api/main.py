@@ -40,45 +40,60 @@ _FRONTEND_DIST = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    settings = get_settings()
-    setup_telemetry(
-        service_name=settings.telemetry.service_name,
-        otlp_endpoint=settings.telemetry.otlp_endpoint,
-        enabled=settings.telemetry.enabled,
-    )
-    await init_db()
+    import logging
+    _log = logging.getLogger(__name__)
+
+    # ── Telemetry (non-fatal) ──────────────────────────────────────────────
+    try:
+        settings = get_settings()
+        setup_telemetry(
+            service_name=settings.telemetry.service_name,
+            otlp_endpoint=settings.telemetry.otlp_endpoint,
+            enabled=settings.telemetry.enabled,
+        )
+    except Exception as exc:
+        _log.warning("Telemetry init skipped: %s", exc)
+
+    # ── Database (non-fatal — app runs in degraded mode without DB) ───────
+    try:
+        await init_db()
+    except Exception as exc:
+        _log.warning("Database init failed (app will run without persistence): %s", exc)
 
     # ── Initialize DB persistence for all services ─────────────────────────
-    from ..db.session import get_session_factory
-    sf = get_session_factory()
-    if sf:
-        from ..enterprise.audit import init_audit_trail
-        from ..notifications import init_notification_service
-        from ..intelligence.annotations import init_annotation_store
-        from ..intelligence.active_learning import init_active_learning_queue
-        from ..auth import init_auth, load_users_from_db
-        from ..enterprise.multi_tenant import init_tenant_persistence, load_tenants_from_db
+    try:
+        from ..db.session import get_session_factory
+        sf = get_session_factory()
+        if sf:
+            from ..enterprise.audit import init_audit_trail
+            from ..notifications import init_notification_service
+            from ..intelligence.annotations import init_annotation_store
+            from ..intelligence.active_learning import init_active_learning_queue
+            from ..auth import init_auth, load_users_from_db
+            from ..enterprise.multi_tenant import init_tenant_persistence, load_tenants_from_db
 
-        # Init services with session factory
-        audit = init_audit_trail(sf)
-        notif_svc = init_notification_service(sf)
-        ann_store = init_annotation_store(sf)
-        al_queue = init_active_learning_queue(session_factory=sf)
-        init_auth(session_factory=sf, secret_key=settings.auth_secret)
-        init_tenant_persistence(sf)
+            # Init services with session factory
+            audit = init_audit_trail(sf)
+            notif_svc = init_notification_service(sf)
+            ann_store = init_annotation_store(sf)
+            al_queue = init_active_learning_queue(session_factory=sf)
+            init_auth(session_factory=sf, secret_key=settings.auth_secret)
+            init_tenant_persistence(sf)
 
-        # Load existing data from DB into memory
-        await audit.load_from_db()
-        await notif_svc.load_from_db()
-        await ann_store.load_from_db()
-        await al_queue.load_from_db()
-        await load_users_from_db()
-        await load_tenants_from_db()
+            # Load existing data from DB into memory
+            await audit.load_from_db()
+            await notif_svc.load_from_db()
+            await ann_store.load_from_db()
+            await al_queue.load_from_db()
+            await load_users_from_db()
+            await load_tenants_from_db()
 
-        # Restore job queue + rebuild search index from DB
-        from .routes.process import load_jobs_from_db
-        await load_jobs_from_db()
-        await _rebuild_search_index_from_db(sf)
+            # Restore job queue + rebuild search index from DB
+            from .routes.process import load_jobs_from_db
+            await load_jobs_from_db()
+            await _rebuild_search_index_from_db(sf)
+    except Exception as exc:
+        _log.warning("Service init skipped: %s", exc)
 
     yield
 
