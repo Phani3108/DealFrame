@@ -1,18 +1,18 @@
-from fastapi import FastAPI
-
-app = FastAPI()
-
-
-@app.get("/")
-async def root():
-    return {"status": "ok", "service": "dealframe"}
+from http.server import BaseHTTPRequestHandler
+import json
 
 
-@app.get("/api/v1/health")
-async def health():
-    return {"status": "ok"}
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        body = json.dumps({
+            "status": "ok",
+            "service": "dealframe",
+            "message": "Vercel Python runtime is working",
+        })
+        self.wfile.write(body.encode("utf-8"))
 
-
-@app.get("/{path:path}")
-async def catch_all(path: str = ""):
-    return {"path": path, "status": "dealframe is running"}
+    def do_POST(self):
+        self.do_GET()
