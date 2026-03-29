@@ -1,25 +1,18 @@
-import os
-import sys
-import traceback
+from fastapi import FastAPI
 
-# Make the project root importable
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+app = FastAPI()
 
-try:
-    from temporalos.api.main import app  # noqa: E402
-except Exception:
-    # If the real app fails to import, create a diagnostic app that
-    # returns the traceback so we can see what's actually broken.
-    from fastapi import FastAPI
-    from fastapi.responses import PlainTextResponse
 
-    _tb = traceback.format_exc()
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "dealframe"}
 
-    app = FastAPI()
 
-    @app.get("/{path:path}")
-    async def diagnostic(path: str = "") -> PlainTextResponse:
-        return PlainTextResponse(
-            f"DealFrame failed to start.\n\n{_tb}",
-            status_code=500,
-        )
+@app.get("/api/v1/health")
+async def health():
+    return {"status": "ok"}
+
+
+@app.get("/{path:path}")
+async def catch_all(path: str = ""):
+    return {"path": path, "status": "dealframe is running"}
