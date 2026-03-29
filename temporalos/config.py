@@ -14,7 +14,9 @@ class AppSettings(BaseModel):
 
 
 class DatabaseSettings(BaseModel):
-    url: str = "postgresql+asyncpg://temporalos:temporalos@localhost:5432/temporalos"
+    # Default to SQLite so the app starts without any external DB.
+    # Override with DATABASE_URL env var for PostgreSQL in production.
+    url: str = "sqlite+aiosqlite:////tmp/dealframe.db"
 
 
 class OpenAISettings(BaseModel):
