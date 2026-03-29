@@ -61,6 +61,12 @@ dev = [
     "streamlit>=1.38.0",
 ]
 
+[project.scripts]
+# Deployment entrypoint — platforms resolve this to find the ASGI app object.
+# e.g. `app` → temporalos.api.main:app
+app = "temporalos.api.main:app"
+dealframe = "temporalos.api.main:app"
+
 [tool.hatch.build.targets.wheel]
 packages = ["temporalos"]
 
