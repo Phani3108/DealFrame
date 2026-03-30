@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { FileVideo, AlertTriangle, Cpu, DollarSign, ArrowRight, RefreshCw, TrendingUp, Zap, ShieldAlert } from 'lucide-react'
+import { FileVideo, AlertTriangle, Cpu, DollarSign, ArrowRight, RefreshCw, TrendingUp, Zap, ShieldAlert, Globe, Play } from 'lucide-react'
 import { StatCard } from '../components/StatCard'
 import { Badge } from '../components/Badge'
 import {
@@ -9,6 +9,7 @@ import {
   getRiskSummary,
   getLocalStatus,
   getRiskAlerts,
+  seedDemoData,
   type Job,
   type Objection,
   type RiskSummary,
@@ -22,6 +23,7 @@ export function Dashboard() {
   const [localStatus, setLocalStatus] = useState<LocalStatus | null>(null)
   const [riskAlerts, setRiskAlerts] = useState<Array<{ job_id: string; alert_type: string; risk_score: number; company: string; message: string }>>([])
   const [loading, setLoading] = useState(true)
+  const [seeding, setSeeding] = useState(false)
 
   const load = () => {
     setLoading(true)
@@ -30,7 +32,7 @@ export function Dashboard() {
         const raw = r.jobs
         const arr = Array.isArray(raw)
           ? raw
-          : Object.entries(raw ?? {}).map(([id, v]: [string, any]) => ({ id, ...v }))
+          : Object.entries(raw ?? {}).map(([id, v]: [string, any]) => ({ id, job_id: id, ...v }))
         setJobs(arr)
       }).catch(() => {}),
       getObjections(5).then(r => setObjections(r.objections ?? [])).catch(() => {}),
@@ -40,10 +42,23 @@ export function Dashboard() {
     ]).finally(() => setLoading(false))
   }
 
+  const handleSeed = async () => {
+    setSeeding(true)
+    try {
+      await seedDemoData()
+      load()
+    } catch { /* ignore */ }
+    setSeeding(false)
+  }
+
   useEffect(() => { load() }, [])
 
   const completedJobs = jobs.filter(j => j.status === 'completed').length
   const highRisk = riskSummary?.high ?? 0
+  const totalSegments = jobs.reduce((acc, j) => {
+    const result = (j as any).result
+    return acc + (result?.segment_count ?? result?.segments?.length ?? 0)
+  }, 0)
 
   return (
     <div className="p-8 animate-fade-in">
@@ -57,7 +72,7 @@ export function Dashboard() {
               <span className="text-xs font-semibold text-indigo-200 uppercase tracking-widest">Live Dashboard</span>
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Decision Intelligence</h1>
-            <p className="text-indigo-200 text-sm mt-1">Video → structured signals, risks, and objections</p>
+            <p className="text-indigo-200 text-sm mt-1">Video &rarr; structured signals, risks, and objections</p>
           </div>
           <div className="flex items-center gap-2.5">
             <button
@@ -79,6 +94,7 @@ export function Dashboard() {
           {[
             { label: 'Videos Processed', value: completedJobs, icon: FileVideo },
             { label: 'High Risk', value: highRisk, icon: AlertTriangle },
+            { label: 'Segments', value: totalSegments, icon: TrendingUp },
             { label: 'Pipeline', value: localStatus?.active_extractor ?? '—', icon: Cpu },
           ].map(({ label, value, icon: Icon }) => (
             <div key={label} className="flex items-center gap-2">
@@ -110,13 +126,11 @@ export function Dashboard() {
           trendPositive={highRisk === 0}
         />
         <StatCard
-          label="Active Extractor"
-          value={localStatus?.active_extractor ?? '—'}
-          icon={Cpu}
-          iconBg="bg-slate-100"
-          iconColor="text-slate-600"
-          trend={localStatus?.finetuned_adapter_available ? 'Fine-tuned' : undefined}
-          trendPositive={localStatus?.finetuned_adapter_available}
+          label="Total Segments"
+          value={totalSegments}
+          icon={TrendingUp}
+          iconBg="bg-violet-50"
+          iconColor="text-violet-600"
         />
         <StatCard
           label="API Cost This Session"
@@ -135,9 +149,20 @@ export function Dashboard() {
         <div className="col-span-2 card overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <h2 className="text-sm font-bold text-slate-900">Recent Jobs</h2>
-            <Link to="/upload" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-semibold">
-              New upload <ArrowRight className="w-3 h-3" />
-            </Link>
+            <div className="flex items-center gap-3">
+              {jobs.length === 0 && (
+                <button
+                  onClick={handleSeed}
+                  disabled={seeding}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-semibold disabled:opacity-50"
+                >
+                  {seeding ? 'Loading...' : 'Load demo data'}
+                </button>
+              )}
+              <Link to="/upload" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-semibold">
+                New upload <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
           </div>
           {jobs.length === 0 ? (
             <div className="px-5 py-12 text-center">
@@ -145,33 +170,60 @@ export function Dashboard() {
                 <FileVideo className="w-7 h-7 text-slate-300" />
               </div>
               <p className="text-sm font-semibold text-slate-500">No videos processed yet</p>
-              <p className="text-xs text-slate-400 mt-1">Upload a sales call or demo to get started</p>
-              <Link to="/upload" className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 font-semibold mt-3">
-                Upload your first video <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+              <p className="text-xs text-slate-400 mt-1">Upload a sales call or paste a YouTube URL to get started</p>
+              <div className="flex items-center justify-center gap-3 mt-4">
+                <Link to="/upload" className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 font-semibold">
+                  Upload your first video <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+                <span className="text-slate-300">or</span>
+                <button onClick={handleSeed} disabled={seeding} className="inline-flex items-center gap-1 text-sm text-violet-600 hover:text-violet-700 font-semibold disabled:opacity-50">
+                  <Play className="w-3.5 h-3.5" />
+                  {seeding ? 'Loading...' : 'Load demo videos'}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {jobs.slice(0, 8).map(job => (
-                <Link
-                  key={job.job_id}
-                  to={`/results/${job.job_id}`}
-                  className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <FileVideo className="w-4 h-4 text-indigo-500" />
+              {jobs.slice(0, 8).map(job => {
+                const jid = (job as any).job_id ?? (job as any).id ?? ''
+                const sourceUrl = (job as any).source_url || ''
+                const title = (job as any).result?.title || ''
+                const segCount = (job as any).result?.segment_count ?? (job as any).result?.segments?.length ?? 0
+                return (
+                  <Link
+                    key={jid}
+                    to={`/results/${jid}`}
+                    className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${sourceUrl ? 'bg-red-50' : 'bg-indigo-50'}`}>
+                        {sourceUrl ? (
+                          <Globe className="w-4 h-4 text-red-500" />
+                        ) : (
+                          <FileVideo className="w-4 h-4 text-indigo-500" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-sm text-slate-700 font-medium truncate block">
+                          {title || jid.slice(0, 16) + '...'}
+                        </span>
+                        {sourceUrl && (
+                          <span className="text-[11px] text-slate-400 truncate block">
+                            {sourceUrl.replace('https://', '').replace('http://', '').slice(0, 40)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-sm text-slate-700 font-mono truncate">
-                      {job.job_id.slice(0, 16)}…
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <Badge label={job.status} />
-                    <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
-                  </div>
-                </Link>
-              ))}
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      {segCount > 0 && (
+                        <span className="text-[11px] text-slate-400 font-medium tabular-nums">{segCount} segments</span>
+                      )}
+                      <Badge label={job.status} />
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           )}
         </div>
@@ -237,7 +289,7 @@ export function Dashboard() {
                   <div key={i}>
                     <div className="flex items-center justify-between text-xs mb-1.5">
                       <span className="text-slate-700 truncate pr-3 font-semibold">{obj.text}</span>
-                      <span className="text-slate-400 flex-shrink-0 tabular-nums font-bold">×{obj.count}</span>
+                      <span className="text-slate-400 flex-shrink-0 tabular-nums font-bold">&times;{obj.count}</span>
                     </div>
                     <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                       <div
@@ -259,38 +311,35 @@ export function Dashboard() {
       <div className="mt-6 grid grid-cols-3 gap-4">
         {[
           {
-            to: '/observatory',
-            label: 'Compare Models',
-            sub: 'Run multi-model analysis',
-            icon: TrendingUp,
-            color: 'from-violet-500 to-purple-600',
-            bg: 'bg-violet-50 border-violet-200 hover:border-violet-300 hover:bg-violet-50',
-            iconBg: 'bg-violet-100',
-            iconColor: 'text-violet-600',
+            to: '/upload',
+            label: 'Process YouTube URL',
+            sub: 'Paste a link and extract intelligence',
+            icon: Globe,
+            bg: 'bg-red-50 border-red-200 hover:border-red-300 hover:bg-red-50',
+            iconBg: 'bg-red-100',
+            iconColor: 'text-red-600',
           },
           {
             to: '/intelligence',
             label: 'View Intelligence',
             sub: 'Objections & trends',
             icon: TrendingUp,
-            color: 'from-indigo-500 to-indigo-600',
             bg: 'bg-indigo-50 border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50',
             iconBg: 'bg-indigo-100',
             iconColor: 'text-indigo-600',
           },
           {
-            to: '/local',
-            label: 'Local Pipeline',
-            sub: 'Zero API cost processing',
+            to: '/observatory',
+            label: 'Compare Models',
+            sub: 'Run multi-model analysis',
             icon: Zap,
-            color: 'from-emerald-500 to-green-600',
-            bg: 'bg-emerald-50 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-50',
-            iconBg: 'bg-emerald-100',
-            iconColor: 'text-emerald-600',
+            bg: 'bg-violet-50 border-violet-200 hover:border-violet-300 hover:bg-violet-50',
+            iconBg: 'bg-violet-100',
+            iconColor: 'text-violet-600',
           },
         ].map(({ to, label, sub, icon: Icon, bg, iconBg, iconColor }) => (
           <Link
-            key={to}
+            key={to + label}
             to={to}
             className={`flex items-center gap-4 border rounded-2xl p-4 transition-all duration-200 hover:shadow-sm group ${bg}`}
           >

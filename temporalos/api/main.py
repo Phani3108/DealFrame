@@ -25,6 +25,7 @@ from .routes import (
 from .routes import auth as auth_routes
 from .routes import export as export_routes
 from .routes import notifications as notification_routes
+from .routes import seed as seed_routes
 from .routes import (
     active_learning as al_routes,
     admin as admin_routes,
@@ -94,6 +95,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             await _rebuild_search_index_from_db(sf)
     except Exception as exc:
         _log.warning("Service init skipped: %s", exc)
+
+    # ── Auto-seed demo data if database is empty ────────────────────────────
+    try:
+        from .routes.process import _jobs
+        if len(_jobs) == 0:
+            _log.info("No jobs in database — auto-seeding demo data…")
+            from .routes.seed import seed_demo_data
+            result = await seed_demo_data()
+            _log.info("Auto-seeded %d videos (%d segments)",
+                       result["videos_created"], result["total_segments"])
+    except Exception as exc:
+        _log.warning("Auto-seed skipped: %s", exc)
 
     yield
 
@@ -202,6 +215,7 @@ app.include_router(diff_routes.router, prefix="/api/v1")
 app.include_router(pattern_routes.router, prefix="/api/v1")
 app.include_router(copilot_routes.router, prefix="/api/v1")
 app.include_router(admin_routes.router, prefix="/api/v1")
+app.include_router(seed_routes.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["meta"])

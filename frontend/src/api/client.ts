@@ -135,6 +135,21 @@ export const processVideo = (file: File, useVision = false) => {
   )
 }
 
+export const processVideoUrl = (url: string, useVision = false) => {
+  const form = new FormData()
+  form.append('video_url', url)
+  return request<{ job_id: string; status: string; source_url: string }>(
+    `/process?use_vision=${useVision}`,
+    { method: 'POST', body: form },
+  )
+}
+
+export const seedDemoData = () =>
+  request<{ status: string; videos_created: number; total_segments: number; jobs: Array<{ job_id: string; title: string; segments: number }> }>(
+    '/seed',
+    { method: 'POST' },
+  )
+
 export const getJob = (jobId: string) => request<Job>(`/jobs/${jobId}`)
 
 export const listJobs = () =>

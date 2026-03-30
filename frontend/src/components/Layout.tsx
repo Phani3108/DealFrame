@@ -27,6 +27,9 @@ import {
   ShieldCheck,
   Bell,
   ChevronRight,
+  Sparkles,
+  Crown,
+  Rocket,
 } from 'lucide-react'
 import { getNotifications, markAllNotificationsRead } from '../api/client'
 
@@ -94,6 +97,40 @@ const navGroups: NavGroup[] = [
 
 const TIER_ORDER: Record<ExperienceTier, number> = { essentials: 0, pro: 1, power: 2 }
 
+const TIER_CONFIG: Record<ExperienceTier, {
+  label: string
+  description: string
+  icon: typeof Sparkles
+  activeClass: string
+  ringClass: string
+  iconClass: string
+}> = {
+  essentials: {
+    label: 'Essentials',
+    description: 'Core tools',
+    icon: Sparkles,
+    activeClass: 'bg-slate-500/15 border-slate-400/30 text-slate-200',
+    ringClass: 'ring-slate-400/20',
+    iconClass: 'text-slate-300',
+  },
+  pro: {
+    label: 'Pro',
+    description: 'Intelligence suite',
+    icon: Rocket,
+    activeClass: 'bg-indigo-500/15 border-indigo-400/30 text-indigo-200',
+    ringClass: 'ring-indigo-400/20',
+    iconClass: 'text-indigo-300',
+  },
+  power: {
+    label: 'Power',
+    description: 'Full platform',
+    icon: Crown,
+    activeClass: 'bg-violet-500/15 border-violet-400/30 text-violet-200',
+    ringClass: 'ring-violet-400/20',
+    iconClass: 'text-violet-300',
+  },
+}
+
 export function getStoredTier(): ExperienceTier {
   try {
     const stored = localStorage.getItem('dealframe_tier')
@@ -115,6 +152,11 @@ export function Layout({ children }: LayoutProps) {
   const [unread, setUnread] = useState(0)
   const [showNotifs, setShowNotifs] = useState(false)
   const [notifs, setNotifs] = useState<Array<{ id: string; type: string; title: string; message: string; read: boolean; created_at: number }>>([])
+
+  const handleTierChange = (newTier: ExperienceTier) => {
+    setTier(newTier)
+    setStoredTier(newTier)
+  }
 
   // Listen for tier changes from Settings page
   useEffect(() => {
@@ -160,8 +202,6 @@ export function Layout({ children }: LayoutProps) {
       .filter(g => g.items.length > 0)
   }, [tier])
 
-  const tierLabel: Record<ExperienceTier, string> = { essentials: 'Essentials', pro: 'Pro', power: 'Power' }
-
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* Dark Sidebar */}
@@ -179,8 +219,37 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </div>
 
+        {/* ── Tier Selector ─────────────────────────────────────────── */}
+        <div className="px-3 pt-4 pb-2">
+          <p className="px-2.5 mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">
+            Experience
+          </p>
+          <div className="flex gap-1">
+            {(['essentials', 'pro', 'power'] as ExperienceTier[]).map(t => {
+              const cfg = TIER_CONFIG[t]
+              const Icon = cfg.icon
+              const isActive = tier === t
+              return (
+                <button
+                  key={t}
+                  onClick={() => handleTierChange(t)}
+                  className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-lg border text-center transition-all duration-200 ${
+                    isActive
+                      ? `${cfg.activeClass} ring-1 ${cfg.ringClass}`
+                      : 'border-transparent text-slate-500 hover:bg-white/[0.04] hover:text-slate-400'
+                  }`}
+                  title={cfg.description}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? cfg.iconClass : ''}`} />
+                  <span className="text-[10px] font-bold leading-none">{cfg.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Nav — filtered by experience tier */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        <nav className="flex-1 px-3 py-2 overflow-y-auto">
           {filteredGroups.map(({ label, items }) => (
             <div key={label} className="mb-5">
               <p className="px-2.5 mb-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">
@@ -207,43 +276,23 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
           ))}
-
-          {/* Tier upgrade prompt */}
-          {tier !== 'power' && (
-            <NavLink
-              to="/settings"
-              className="flex items-center gap-2 px-2.5 py-2 mt-2 rounded-lg text-[11px] text-indigo-400/70 hover:text-indigo-300 hover:bg-white/[0.04] transition-all"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-              <span>Unlock more in Settings</span>
-            </NavLink>
-          )}
         </nav>
 
-        {/* Tier badge + Footer */}
+        {/* Footer */}
         <div className="px-4 py-4 border-t border-white/[0.06]">
-          <div className="flex items-center gap-2 mb-3">
-            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-              tier === 'power' ? 'bg-violet-500/20 text-violet-300' :
-              tier === 'pro' ? 'bg-indigo-500/20 text-indigo-300' :
-              'bg-slate-500/20 text-slate-400'
-            }`}>
-              {tierLabel[tier]}
-            </span>
-          </div>
           <a
             href="/docs"
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1 text-xs text-slate-600 hover:text-indigo-400 transition-colors w-fit"
           >
-            API Docs ↗
+            API Docs
           </a>
-          <p className="text-[10px] text-slate-700 mt-1.5">v0.1.0 · 10 Phases</p>
+          <p className="text-[10px] text-slate-700 mt-1.5">v0.1.0</p>
           {/* Copyright — do not remove */}
           <div className="mt-3 pt-3 border-t border-white/[0.04]">
             <p className="text-[9px] text-slate-700 leading-tight">
-              © 2024-2026{' '}
+              &copy; 2024-2026{' '}
               <a
                 href="https://linkedin.com/in/phani-marupaka"
                 target="_blank"
@@ -259,7 +308,7 @@ export function Layout({ children }: LayoutProps) {
               rel="noreferrer"
               className="text-[9px] text-slate-700 hover:text-indigo-400 transition-colors"
             >
-              phanimarupaka.netlify.app ↗
+              phanimarupaka.netlify.app
             </a>
           </div>
         </div>
@@ -312,4 +361,3 @@ export function Layout({ children }: LayoutProps) {
     </div>
   )
 }
-
