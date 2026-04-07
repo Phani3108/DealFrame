@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   Upload,
@@ -29,6 +29,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  Home,
 } from 'lucide-react'
 import { getNotifications, markAllNotificationsRead } from '../api/client'
 
@@ -51,6 +52,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Core',
     items: [
+      { to: '/home', label: 'Home', icon: Home, tier: 'essentials' },
       { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, tier: 'essentials' },
       { to: '/upload', label: 'Upload & Process', icon: Upload, tier: 'essentials' },
       { to: '/search', label: 'Search', icon: Search, tier: 'essentials' },
@@ -204,7 +206,7 @@ export function Layout({ children }: LayoutProps) {
         {/* Logo + mobile close */}
         <div className="px-5 py-5 border-b border-white/[0.06]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <NavLink to="/home" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
               <div className="w-9 h-9 bg-gradient-to-br from-indigo-400 via-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-900/50 flex-shrink-0">
                 <Activity className="w-5 h-5 text-white" />
               </div>
@@ -212,7 +214,7 @@ export function Layout({ children }: LayoutProps) {
                 <p className="font-bold text-white text-sm leading-tight tracking-tight">DealFrame</p>
                 <p className="text-[10px] text-slate-500 leading-tight mt-0.5">Negotiation Intelligence</p>
               </div>
-            </div>
+            </NavLink>
             <button
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors"

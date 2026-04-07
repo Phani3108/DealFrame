@@ -48,6 +48,7 @@ export default function App() {
 
         {/* App pages — wrapped in sidebar layout */}
         <Route element={<AppShell />}>
+          <Route path="/home" element={<LandingPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/results/:jobId" element={<Results />} />
