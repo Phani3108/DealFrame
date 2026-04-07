@@ -54,7 +54,7 @@ export function Admin() {
   ]
 
   return (
-    <div className="p-8 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
       {/* Header */}
       <div className="relative mb-8 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 rounded-2xl p-7 overflow-hidden shadow-lg shadow-slate-900/30">
         <div className="relative">
@@ -101,8 +101,8 @@ export function Admin() {
 
           {/* Tenants */}
           {tab === 'tenants' && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+              <table className="w-full text-sm min-w-[500px]">
                 <thead><tr className="border-b border-slate-100 bg-slate-50/50">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Slug</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Plan</th>
@@ -126,8 +126,8 @@ export function Admin() {
 
           {/* Users */}
           {tab === 'users' && (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+              <table className="w-full text-sm min-w-[500px]">
                 <thead><tr className="border-b border-slate-100 bg-slate-50/50">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">User</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>

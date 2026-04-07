@@ -19,16 +19,30 @@ async def get_patterns(
     all_segments = []
     for jid, jdata in _jobs.items():
         result = jdata.get("result", {})
-        for seg in result.get("segments", []):
-            all_segments.append(seg)
+        segs = result.get("segments", [])
+        all_segments.extend(segs)
+        if segs:
+            miner.add_call(jid, result)
 
     if not all_segments:
         return {"pattern_type": pattern_type, "patterns": [], "total_segments": 0}
 
-    patterns = miner.mine(all_segments, pattern_type=pattern_type)
+    all_patterns = miner.mine_patterns(min_sample_size=1)
+
+    # Filter by pattern_type
+    type_map = {
+        "objection_risk": "objection",
+        "topic_risk": "topic",
+        "rep_performance": "rep",
+        "behavioral": "behavior",
+    }
+    target = type_map.get(pattern_type, pattern_type)
+    filtered = [p.to_dict() if hasattr(p, "to_dict") else p
+                for p in all_patterns if p.category == target]
+
     return {
         "pattern_type": pattern_type,
-        "patterns": patterns[:limit] if isinstance(patterns, list) else patterns,
+        "patterns": filtered[:limit],
         "total_segments": len(all_segments),
     }
 

@@ -151,7 +151,7 @@ export function Streaming() {
   }
 
   return (
-    <div className="p-8 max-w-6xl animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl animate-fade-in">
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
@@ -201,9 +201,9 @@ export function Streaming() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Transcript feed */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col" style={{ height: 420 }}>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[320px] sm:h-[400px] lg:h-[420px]">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-900">Transcript Feed</h2>
             <span className="text-xs text-slate-400">{transcripts.length} chunks</span>
@@ -230,7 +230,7 @@ export function Streaming() {
         </div>
 
         {/* Extraction results */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col" style={{ height: 420 }}>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[320px] sm:h-[400px] lg:h-[420px]">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-900">Extraction Results</h2>
             <span className="text-xs text-slate-400">{extractions.length} segments</span>

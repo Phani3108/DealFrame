@@ -58,7 +58,7 @@ export function Finetuning() {
   }
 
   return (
-    <div className="p-8 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="page-title">Fine-tuning</h1>
@@ -70,7 +70,7 @@ export function Finetuning() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Dataset stats */}
         <div className="col-span-1 space-y-4">
           <div className="card p-5">
@@ -199,7 +199,7 @@ export function Finetuning() {
                     </div>
 
                     {run.training_metrics && (
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <p className="text-xs text-slate-400 mb-1">Train loss</p>
                           <LossBar value={run.training_metrics.train_loss} />

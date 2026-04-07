@@ -123,7 +123,7 @@ export function Observability() {
   useEffect(() => { load() }, [])
 
   return (
-    <div className="p-8 max-w-6xl animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl animate-fade-in">
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
@@ -146,7 +146,7 @@ export function Observability() {
       </div>
 
       {/* Quick stat row */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -183,7 +183,7 @@ export function Observability() {
       </div>
 
       {/* Main panels */}
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <DriftStatusCard report={drift} />
         <CalibrationPanel report={calibration} />
       </div>

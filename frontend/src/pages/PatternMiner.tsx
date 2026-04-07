@@ -32,7 +32,7 @@ export function PatternMiner() {
   }
 
   return (
-    <div className="p-8 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
       {/* Header */}
       <div className="relative mb-8 bg-gradient-to-br from-emerald-600 via-emerald-700 to-green-800 rounded-2xl p-7 overflow-hidden shadow-lg shadow-emerald-900/20">
         <div className="relative">

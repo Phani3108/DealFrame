@@ -21,7 +21,7 @@ const TOPIC_COLORS = ['#6366F1', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#0
 
 export function Intelligence() {
   const [objections, setObjections] = useState<Array<{ text: string; count: number; risk_avg: number }>>([])
-  const [riskSummary, setRiskSummary] = useState<{ high: number; medium: number; low: number; average_score: number } | null>(null)
+  const [riskSummary, setRiskSummary] = useState<Record<string, any> | null>(null)
   const [topicTrends, setTopicTrends] = useState<Array<{ topic: string; daily_counts: Record<string, number> }>>([])
   const [loading, setLoading] = useState(true)
 
@@ -39,12 +39,20 @@ export function Intelligence() {
   const objData = objections.map(o => ({ name: o.text.slice(0, 30), count: o.count, risk: Number((o.risk_avg * 100).toFixed(0)) }))
 
   const riskPieData = riskSummary
-    ? [
-        { name: 'High', value: riskSummary.high },
-        { name: 'Medium', value: riskSummary.medium },
-        { name: 'Low', value: riskSummary.low },
-      ].filter(d => d.value > 0)
+    ? (riskSummary.high !== undefined
+      ? [
+          { name: 'High', value: riskSummary.high },
+          { name: 'Medium', value: riskSummary.medium },
+          { name: 'Low', value: riskSummary.low },
+        ].filter(d => d.value > 0)
+      : (riskSummary.top_risk_topics ?? []).map((t: string, i: number) => ({
+          name: t.charAt(0).toUpperCase() + t.slice(1),
+          value: Math.max(1, 5 - i), // weight by rank
+        }))
+    )
     : []
+
+  const avgRiskScore = riskSummary?.average_score ?? riskSummary?.avg_risk_score ?? 0
 
   // Build trend line data — collect all dates, create one entry per date
   const allDates = [...new Set(
@@ -62,7 +70,7 @@ export function Intelligence() {
   const isEmpty = objections.length === 0 && !riskSummary
 
   return (
-    <div className="p-8 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="page-title">Intelligence</h1>
@@ -83,7 +91,7 @@ export function Intelligence() {
       ) : (
         <div className="space-y-6">
           {/* Top objections + Risk pie */}
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Objections bar chart */}
             <div className="col-span-2 card p-5">
               <h2 className="text-sm font-semibold text-slate-900 mb-5">Top Objections</h2>
@@ -133,7 +141,7 @@ export function Intelligence() {
                         paddingAngle={3}
                         dataKey="value"
                       >
-                        {riskPieData.map((_, index) => (
+                        {riskPieData.map((_: any, index: number) => (
                           <Cell key={index} fill={RISK_COLORS[index]} />
                         ))}
                       </Pie>
@@ -141,7 +149,7 @@ export function Intelligence() {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="flex justify-center gap-4 mt-1">
-                    {riskPieData.map((d, i) => (
+                    {riskPieData.map((d: any, i: number) => (
                       <div key={d.name} className="flex items-center gap-1.5 text-xs text-slate-600">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ background: RISK_COLORS[i] }} />
                         {d.name} ({d.value})
@@ -150,7 +158,8 @@ export function Intelligence() {
                   </div>
                   {riskSummary && (
                     <p className="text-center text-xs text-slate-400 mt-2">
-                      Avg risk: <span className="font-semibold text-slate-600">{(riskSummary.average_score * 100).toFixed(0)}%</span>
+                      Avg risk: <span className="font-semibold text-slate-600">{(avgRiskScore * 100).toFixed(0)}%</span>
+                      {riskSummary.video_count && <span className="ml-2">({riskSummary.video_count} videos)</span>}
                     </p>
                   )}
                 </>

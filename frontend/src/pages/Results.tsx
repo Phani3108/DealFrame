@@ -102,7 +102,7 @@ export function Results() {
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center gap-3 text-slate-400">
+      <div className="p-4 sm:p-6 lg:p-8 flex items-center gap-3 text-slate-400">
         <div className="w-4 h-4 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />
         Loading results…
       </div>
@@ -111,8 +111,8 @@ export function Results() {
 
   if (error || !job) {
     return (
-      <div className="p-8">
-        <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-4">
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-4">
           <ArrowLeft className="w-4 h-4" /> Back
         </Link>
         <div className="card p-8 text-center">
@@ -128,9 +128,9 @@ export function Results() {
   const highRiskCount = segments.filter(p => p.extraction.risk === 'high').length
 
   return (
-    <div className="p-8 max-w-4xl animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl animate-fade-in">
       {/* Back */}
-      <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6 group">
+      <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6 group">
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
         Dashboard
       </Link>
@@ -288,7 +288,7 @@ export function Results() {
             : speakers.length === 0
             ? <p className="text-sm text-slate-400 card p-6 text-center">No speaker data available.</p>
             : (
-              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50">

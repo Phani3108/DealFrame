@@ -70,7 +70,7 @@ export function Observatory() {
   }
 
   return (
-    <div className="p-8 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="page-title">Model Observatory</h1>
@@ -82,7 +82,7 @@ export function Observatory() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upload form */}
         <div className="col-span-1">
           <div className="card p-5">

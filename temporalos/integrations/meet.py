@@ -53,8 +53,10 @@ def parse_calendar_notification(headers: Dict[str, str]) -> Optional[Dict[str, s
 
     Returns channel_id, resource_id, resource_state, or None if invalid.
     """
-    channel_id = headers.get("X-Goog-Channel-ID") or headers.get("x-goog-channel-id")
-    resource_id = headers.get("X-Goog-Resource-ID") or headers.get("x-goog-resource-id")
+    channel_id = (headers.get("X-Goog-Channel-ID") or headers.get("X-Goog-Channel-Id")
+                  or headers.get("x-goog-channel-id"))
+    resource_id = (headers.get("X-Goog-Resource-ID") or headers.get("X-Goog-Resource-Id")
+                   or headers.get("x-goog-resource-id"))
     resource_state = headers.get("X-Goog-Resource-State", "").lower()
 
     if not channel_id or resource_state not in ("exists", "sync", "not_exists"):
@@ -68,12 +70,19 @@ def parse_calendar_notification(headers: Dict[str, str]) -> Optional[Dict[str, s
 
 
 def find_recording_in_drive(drive_service: Any, event_summary: str,
-                             host_email: str) -> Optional[str]:
+                             host_email: str) -> Optional[Dict[str, Any]]:
     """Search Google Drive for a Meet recording by event name.
 
-    Returns the first matching file's download URL, or None.
+    Returns the first matching file dict, or None.
     (Requires googleapiclient to be installed for real usage.)
     """
-    # In production, call: drive_service.files().list(q=..., fields=...).execute()
-    # For now, return None to indicate no recording found via mock
-    return None
+    try:
+        query = f"name contains '{event_summary}' and mimeType contains 'video/'"
+        response = drive_service.files().list(
+            q=query,
+            fields="files(id, name, mimeType)",
+        ).execute()
+        files = response.get("files", [])
+        return files[0] if files else None
+    except Exception:
+        return None

@@ -30,7 +30,21 @@ Rules:
 - decision_signals: array of buying intent or next-step signals
 - confidence: your confidence in the extraction (0.0 to 1.0)
 
-Respond ONLY with valid JSON. No markdown fences, no commentary.\
+Respond ONLY with valid JSON. No markdown fences, no commentary.
+
+Here are examples:
+
+Example 1:
+Transcript: "That's quite a bit more than what we're paying for our current solution. We'd need to see at least a 20% discount to make this work."
+Output: {"topic":"pricing","sentiment":"negative","risk":"high","risk_score":0.75,"objections":["more than current solution","need 20% discount"],"decision_signals":[],"confidence":0.9}
+
+Example 2:
+Transcript: "I love the integration capabilities. Can you send over a proposal? I'd like to get this in front of my VP by next Friday."
+Output: {"topic":"features","sentiment":"positive","risk":"low","risk_score":0.15,"objections":[],"decision_signals":["send proposal","get in front of VP by Friday"],"confidence":0.92}
+
+Example 3:
+Transcript: "We're also evaluating Gong and Chorus. What makes you different? Our security team has some concerns about data residency."
+Output: {"topic":"competition","sentiment":"hesitant","risk":"medium","risk_score":0.55,"objections":["evaluating competitors","data residency concerns"],"decision_signals":[],"confidence":0.85}\
 """
 
 EXTRACTION_PROMPT = """\
@@ -105,27 +119,70 @@ class LLMExtractionRouter(BaseExtractionModel):
     def _fallback_extract(self, segment: AlignedSegment, latency_ms: int) -> ExtractionResult:
         """Rule-based fallback when LLM fails."""
         text = (segment.transcript or "").lower()
+
+        # Topic detection with weighted matching
+        topic_keywords = {
+            "pricing": ["price", "cost", "budget", "expensive", "cheap", "discount", "dollars", "per month", "rate"],
+            "features": ["feature", "integration", "capability", "functionality", "workflow", "dashboard"],
+            "competition": ["competitor", "alternative", "gong", "chorus", "compared to", "versus", "switch from"],
+            "timeline": ["timeline", "when", "deadline", "quarter", "by next", "this month", "urgent"],
+            "security": ["security", "compliance", "soc2", "gdpr", "encryption", "audit", "hipaa"],
+            "onboarding": ["onboard", "implement", "setup", "migration", "getting started", "rollout"],
+            "support": ["support", "help desk", "SLA", "response time", "customer service"],
+            "legal": ["contract", "terms", "liability", "renewal", "clause", "agreement"],
+        }
         topic = "other"
-        for kw, t in [("price", "pricing"), ("cost", "pricing"), ("feature", "features"),
-                       ("competitor", "competition"), ("timeline", "timeline"),
-                       ("security", "security"), ("onboard", "onboarding")]:
-            if kw in text:
+        max_hits = 0
+        for t, keywords in topic_keywords.items():
+            hits = sum(1 for kw in keywords if kw in text)
+            if hits > max_hits:
+                max_hits = hits
                 topic = t
-                break
+
+        # Objection detection
         risk_score = 0.1
         objections = []
-        for phrase in ["too expensive", "not sure", "concerned", "don't think", "cancel"]:
+        objection_phrases = [
+            "too expensive", "over budget", "not sure", "concerned about",
+            "don't think", "might cancel", "not convinced", "hesitant",
+            "already using", "no budget", "can't justify", "pushback",
+            "not a priority", "too complex", "worried about",
+        ]
+        for phrase in objection_phrases:
             if phrase in text:
                 objections.append(phrase)
-                risk_score = min(risk_score + 0.2, 1.0)
+                risk_score = min(risk_score + 0.15, 1.0)
+
+        # Decision signal detection
         signals = []
-        for phrase in ["next steps", "move forward", "send proposal", "schedule"]:
+        signal_phrases = [
+            "next steps", "move forward", "send proposal", "schedule a demo",
+            "bring in my manager", "looks great", "interested", "let's do it",
+            "sign the contract", "get started", "when can we",
+        ]
+        for phrase in signal_phrases:
             if phrase in text:
                 signals.append(phrase)
+                risk_score = max(risk_score - 0.1, 0.0)
+
+        # Sentiment
+        neg_words = sum(1 for w in ["no", "not", "can't", "won't", "never", "expensive", "concerned"] if w in text)
+        pos_words = sum(1 for w in ["great", "love", "excellent", "perfect", "excited", "interested"] if w in text)
+        if neg_words > pos_words + 1:
+            sentiment = "negative"
+        elif pos_words > neg_words + 1:
+            sentiment = "positive"
+        elif neg_words > 0 and pos_words > 0:
+            sentiment = "hesitant"
+        else:
+            sentiment = "neutral"
+
+        risk = "high" if risk_score > 0.6 else "medium" if risk_score > 0.3 else "low"
+
         return ExtractionResult(
-            topic=topic, sentiment="neutral", risk="medium" if risk_score > 0.3 else "low",
-            risk_score=risk_score, objections=objections, decision_signals=signals,
-            confidence=0.3, model_name="fallback_rules", latency_ms=latency_ms,
+            topic=topic, sentiment=sentiment, risk=risk,
+            risk_score=round(risk_score, 2), objections=objections, decision_signals=signals,
+            confidence=0.35, model_name="fallback_rules", latency_ms=latency_ms,
         )
 
 

@@ -85,7 +85,7 @@ export function Coaching() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Target className="w-6 h-6 text-indigo-500" />
@@ -175,7 +175,7 @@ export function Coaching() {
           </div>
 
           {/* Strengths + Improvements */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
               <h3 className="font-semibold text-emerald-800 mb-3 flex items-center gap-1.5">
                 <TrendingUp className="w-4 h-4" /> Strengths

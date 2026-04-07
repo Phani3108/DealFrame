@@ -231,15 +231,15 @@ class TestSchemaRegistry:
             FieldDefinition, FieldType, SchemaDefinition, SchemaRegistry
         )
         registry = SchemaRegistry(schemas_dir=tmp_path / "schemas")
-        schema = SchemaDefinition(
+        created = registry.create(
             name="Test Schema",
-            vertical="sales",
+            description="A test schema",
             fields=[
                 FieldDefinition(name="pain_point", type=FieldType.STRING, description="Key pain"),
-                FieldDefinition(name="budget", type=FieldType.CATEGORY, options=["low", "medium", "high"]),
+                FieldDefinition(name="budget", type=FieldType.CATEGORY, description="Budget level", options=["low", "medium", "high"]),
             ],
+            vertical="sales",
         )
-        created = registry.create(schema)
         assert created.id
         retrieved = registry.get(created.id)
         assert retrieved is not None
@@ -250,14 +250,14 @@ class TestSchemaRegistry:
         from temporalos.schemas.registry import FieldDefinition, FieldType, SchemaDefinition, SchemaRegistry
         registry = SchemaRegistry(schemas_dir=tmp_path / "schemas")
         for i in range(3):
-            registry.create(SchemaDefinition(name=f"Schema {i}", fields=[]))
-        schemas = registry.list_schemas()
+            registry.create(name=f"Schema {i}", description=f"Desc {i}", fields=[])
+        schemas = registry.list()
         assert len(schemas) == 3
 
     def test_delete_schema(self, tmp_path):
         from temporalos.schemas.registry import SchemaDefinition, SchemaRegistry
         registry = SchemaRegistry(schemas_dir=tmp_path / "schemas")
-        s = registry.create(SchemaDefinition(name="To Delete", fields=[]))
+        s = registry.create(name="To Delete", description="Will be deleted", fields=[])
         assert registry.get(s.id) is not None
         registry.delete(s.id)
         assert registry.get(s.id) is None
@@ -265,19 +265,24 @@ class TestSchemaRegistry:
     def test_schema_to_dict(self, tmp_path):
         from temporalos.schemas.registry import FieldDefinition, FieldType, SchemaDefinition, SchemaRegistry
         registry = SchemaRegistry(schemas_dir=tmp_path / "schemas")
-        schema = registry.create(SchemaDefinition(name="Dict Test", fields=[
-            FieldDefinition(name="topic", type=FieldType.STRING),
-        ]))
+        schema = registry.create(name="Dict Test", description="Test dict", fields=[
+            FieldDefinition(name="topic", type=FieldType.STRING, description="Topic"),
+        ])
         d = schema.to_dict()
         assert "id" in d and "name" in d and "fields" in d
 
     def test_build_prompt_from_schema(self, tmp_path):
         from temporalos.schemas.builder import build_prompt_from_schema
         from temporalos.schemas.registry import FieldDefinition, FieldType, SchemaDefinition
-        schema = SchemaDefinition(name="Custom", fields=[
-            FieldDefinition(name="budget_level", type=FieldType.CATEGORY, options=["low", "medium", "high"]),
-            FieldDefinition(name="decision_maker", type=FieldType.BOOLEAN),
-        ])
+        schema = SchemaDefinition(
+            id="test-id",
+            name="Custom",
+            description="Custom schema",
+            fields=[
+                FieldDefinition(name="budget_level", type=FieldType.CATEGORY, description="Budget", options=["low", "medium", "high"]),
+                FieldDefinition(name="decision_maker", type=FieldType.BOOLEAN, description="Is decision maker"),
+            ],
+        )
         prompt = build_prompt_from_schema(schema, "We have a tight budget", "No slide text")
         assert "budget_level" in prompt
         assert "decision_maker" in prompt
@@ -289,11 +294,11 @@ class TestWebhookDelivery:
     def test_webhook_registry_crud(self, tmp_path):
         from temporalos.webhooks.models import WebhookConfig, WebhookEvent, WebhookRegistry
         registry = WebhookRegistry(webhooks_dir=tmp_path / "webhooks")
-        wh = registry.create(WebhookConfig(
+        wh = registry.create(
             url="https://example.com/hook",
             events=[WebhookEvent.JOB_COMPLETED],
-            secret="my-secret",
-        ))
+            description="Test hook",
+        )
         assert wh.id
         assert registry.get(wh.id) is not None
         registry.delete(wh.id)
@@ -303,11 +308,11 @@ class TestWebhookDelivery:
         from temporalos.webhooks.models import WebhookConfig, WebhookEvent, WebhookRegistry
         from temporalos.webhooks.deliverer import WebhookDeliverer
         registry = WebhookRegistry(webhooks_dir=tmp_path / "webhooks")
-        registry.create(WebhookConfig(
+        registry.create(
             url="https://httpbin.org/post",
             events=[WebhookEvent.JOB_COMPLETED],
-            secret="test-secret",
-        ))
+            description="Test delivery",
+        )
 
         with patch("temporalos.webhooks.deliverer.urllib.request.urlopen") as mock_open:
             resp = MagicMock()
@@ -322,20 +327,20 @@ class TestWebhookDelivery:
 
         assert len(results) == 1
         assert results[0]["webhook_id"]
-        assert results[0]["http_status"] == 200
+        assert results[0]["status"] == 200
 
     def test_hmac_signature_present(self, tmp_path):
         from temporalos.webhooks.models import WebhookConfig, WebhookEvent, WebhookRegistry
         from temporalos.webhooks.deliverer import WebhookDeliverer
         registry = WebhookRegistry(webhooks_dir=tmp_path / "webhooks")
-        registry.create(WebhookConfig(
+        registry.create(
             url="https://httpbin.org/post",
-            events=[WebhookEvent.RISK_HIGH],
-            secret="s3cr3t",
-        ))
+            events=[WebhookEvent.HIGH_RISK_DETECTED],
+            description="HMAC test",
+        )
         captured_headers = {}
 
-        def fake_urlopen(req):
+        def fake_urlopen(req, **kwargs):
             captured_headers.update(dict(req.headers))
             resp = MagicMock()
             resp.status = 200
@@ -346,7 +351,7 @@ class TestWebhookDelivery:
 
         with patch("temporalos.webhooks.deliverer.urllib.request.urlopen", side_effect=fake_urlopen):
             deliverer = WebhookDeliverer(registry=registry)
-            deliverer.deliver(WebhookEvent.RISK_HIGH, {"risk_score": 0.9})
+            deliverer.deliver(WebhookEvent.HIGH_RISK_DETECTED, {"risk_score": 0.9})
 
         sig_key = next((k for k in captured_headers if "signature" in k.lower()), None)
         assert sig_key is not None, "HMAC signature header not sent"

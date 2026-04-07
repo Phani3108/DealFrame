@@ -55,7 +55,7 @@ export function LiveCopilot() {
   }
 
   return (
-    <div className="p-8 animate-fade-in h-[calc(100vh-2rem)] flex flex-col">
+    <div className="p-4 sm:p-6 lg:p-8 animate-fade-in h-[calc(100vh-2rem)] flex flex-col">
       {/* Header */}
       <div className="relative mb-6 bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-800 rounded-2xl p-7 overflow-hidden shadow-lg shadow-blue-900/20 flex-shrink-0">
         <div className="relative flex items-start justify-between">

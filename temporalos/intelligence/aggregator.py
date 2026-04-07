@@ -111,10 +111,11 @@ class VideoAggregator:
         limit: int = 10,
     ) -> list[ObjectionSummary]:
         from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
 
         from ..db.models import Extraction, Segment, Video
 
-        stmt = select(Extraction)
+        stmt = select(Extraction).options(selectinload(Extraction.segment))
         if portfolio_id is not None:
             from ..db.models import PortfolioVideo
 

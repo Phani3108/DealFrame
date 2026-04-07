@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Upload,
@@ -27,9 +27,8 @@ import {
   ShieldCheck,
   Bell,
   ChevronRight,
-  Sparkles,
-  Crown,
-  Rocket,
+  Menu,
+  X,
 } from 'lucide-react'
 import { getNotifications, markAllNotificationsRead } from '../api/client'
 
@@ -52,7 +51,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Core',
     items: [
-      { to: '/', label: 'Dashboard', icon: LayoutDashboard, tier: 'essentials' },
+      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, tier: 'essentials' },
       { to: '/upload', label: 'Upload & Process', icon: Upload, tier: 'essentials' },
       { to: '/search', label: 'Search', icon: Search, tier: 'essentials' },
     ],
@@ -97,40 +96,6 @@ const navGroups: NavGroup[] = [
 
 const TIER_ORDER: Record<ExperienceTier, number> = { essentials: 0, pro: 1, power: 2 }
 
-const TIER_CONFIG: Record<ExperienceTier, {
-  label: string
-  description: string
-  icon: typeof Sparkles
-  activeClass: string
-  ringClass: string
-  iconClass: string
-}> = {
-  essentials: {
-    label: 'Essentials',
-    description: 'Core tools',
-    icon: Sparkles,
-    activeClass: 'bg-slate-500/15 border-slate-400/30 text-slate-200',
-    ringClass: 'ring-slate-400/20',
-    iconClass: 'text-slate-300',
-  },
-  pro: {
-    label: 'Pro',
-    description: 'Intelligence suite',
-    icon: Rocket,
-    activeClass: 'bg-indigo-500/15 border-indigo-400/30 text-indigo-200',
-    ringClass: 'ring-indigo-400/20',
-    iconClass: 'text-indigo-300',
-  },
-  power: {
-    label: 'Power',
-    description: 'Full platform',
-    icon: Crown,
-    activeClass: 'bg-violet-500/15 border-violet-400/30 text-violet-200',
-    ringClass: 'ring-violet-400/20',
-    iconClass: 'text-violet-300',
-  },
-}
-
 export function getStoredTier(): ExperienceTier {
   try {
     const stored = localStorage.getItem('dealframe_tier')
@@ -152,11 +117,25 @@ export function Layout({ children }: LayoutProps) {
   const [unread, setUnread] = useState(0)
   const [showNotifs, setShowNotifs] = useState(false)
   const [notifs, setNotifs] = useState<Array<{ id: string; type: string; title: string; message: string; read: boolean; created_at: number }>>([])
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const location = useLocation()
 
-  const handleTierChange = (newTier: ExperienceTier) => {
-    setTier(newTier)
-    setStoredTier(newTier)
-  }
+  // Close sidebar on navigation (mobile)
+  useEffect(() => { setSidebarOpen(false) }, [location.pathname])
+
+  // Close sidebar on Escape key
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSidebarOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Prevent body scroll when sidebar overlay is open on mobile
+  useEffect(() => {
+    if (sidebarOpen) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = ''
+    return () => { document.body.style.overflow = '' }
+  }, [sidebarOpen])
 
   // Listen for tier changes from Settings page
   useEffect(() => {
@@ -202,49 +181,65 @@ export function Layout({ children }: LayoutProps) {
       .filter(g => g.items.length > 0)
   }, [tier])
 
+  const tierLabel: Record<ExperienceTier, string> = { essentials: 'Essentials', pro: 'Pro', power: 'Power' }
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* Dark Sidebar */}
-      <aside className="w-60 bg-[#0a0f1e] flex flex-col flex-shrink-0">
-        {/* Logo */}
+      {/* Mobile overlay backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Dark Sidebar — hidden on mobile by default, overlay when toggled */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-[#0a0f1e] flex flex-col flex-shrink-0
+        transform transition-transform duration-300 ease-in-out
+        lg:relative lg:translate-x-0 lg:w-60
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* Logo + mobile close */}
         <div className="px-5 py-5 border-b border-white/[0.06]">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-indigo-400 via-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-900/50 flex-shrink-0">
-              <Activity className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-gradient-to-br from-indigo-400 via-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-900/50 flex-shrink-0">
+                <Activity className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-bold text-white text-sm leading-tight tracking-tight">DealFrame</p>
+                <p className="text-[10px] text-slate-500 leading-tight mt-0.5">Negotiation Intelligence</p>
+              </div>
             </div>
-            <div>
-              <p className="font-bold text-white text-sm leading-tight tracking-tight">DealFrame</p>
-              <p className="text-[10px] text-slate-500 leading-tight mt-0.5">Negotiation Intelligence</p>
-            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors"
+              aria-label="Close menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
-        {/* ── Tier Selector ─────────────────────────────────────────── */}
+        {/* Tier toggle — segmented control */}
         <div className="px-3 pt-4 pb-2">
-          <p className="px-2.5 mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">
-            Experience
-          </p>
-          <div className="flex gap-1">
-            {(['essentials', 'pro', 'power'] as ExperienceTier[]).map(t => {
-              const cfg = TIER_CONFIG[t]
-              const Icon = cfg.icon
-              const isActive = tier === t
-              return (
-                <button
-                  key={t}
-                  onClick={() => handleTierChange(t)}
-                  className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-lg border text-center transition-all duration-200 ${
-                    isActive
-                      ? `${cfg.activeClass} ring-1 ${cfg.ringClass}`
-                      : 'border-transparent text-slate-500 hover:bg-white/[0.04] hover:text-slate-400'
-                  }`}
-                  title={cfg.description}
-                >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? cfg.iconClass : ''}`} />
-                  <span className="text-[10px] font-bold leading-none">{cfg.label}</span>
-                </button>
-              )
-            })}
+          <p className="px-2.5 mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-slate-600">Experience</p>
+          <div className="flex bg-white/[0.04] rounded-lg p-0.5 border border-white/[0.06]">
+            {(['essentials', 'pro', 'power'] as ExperienceTier[]).map(opt => (
+              <button
+                key={opt}
+                onClick={() => { setTier(opt); setStoredTier(opt) }}
+                className={`flex-1 text-[11px] font-bold uppercase tracking-wider py-1.5 rounded-md transition-all duration-150 ${
+                  tier === opt
+                    ? 'bg-indigo-500/20 text-indigo-300 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.04]'
+                }`}
+              >
+                {tierLabel[opt]}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -260,7 +255,7 @@ export function Layout({ children }: LayoutProps) {
                   <NavLink
                     key={to}
                     to={to}
-                    end={to === '/'}
+                    end={to === '/dashboard'}
                     className={({ isActive }) =>
                       `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                         isActive
@@ -276,6 +271,7 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
           ))}
+
         </nav>
 
         {/* Footer */}
@@ -284,15 +280,17 @@ export function Layout({ children }: LayoutProps) {
             href="/docs"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 text-xs text-slate-600 hover:text-indigo-400 transition-colors w-fit"
+            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 text-white text-xs font-bold rounded-lg shadow hover:from-indigo-600 hover:to-purple-600 transition-all w-full justify-center"
+            style={{ letterSpacing: '0.04em' }}
           >
+            <svg width="16" height="16" fill="none" viewBox="0 0 16 16" className="inline-block mr-1"><path d="M10.5 2.5h3v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 10l7.5-7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M13.5 8.5v3a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             API Docs
           </a>
-          <p className="text-[10px] text-slate-700 mt-1.5">v0.1.0</p>
+          <p className="text-[10px] text-slate-700 mt-1.5">v0.1.0 · 10 Phases</p>
           {/* Copyright — do not remove */}
           <div className="mt-3 pt-3 border-t border-white/[0.04]">
             <p className="text-[9px] text-slate-700 leading-tight">
-              &copy; 2024-2026{' '}
+              © 2024-2026{' '}
               <a
                 href="https://linkedin.com/in/phani-marupaka"
                 target="_blank"
@@ -308,7 +306,7 @@ export function Layout({ children }: LayoutProps) {
               rel="noreferrer"
               className="text-[9px] text-slate-700 hover:text-indigo-400 transition-colors"
             >
-              phanimarupaka.netlify.app
+              phanimarupaka.netlify.app ↗
             </a>
           </div>
         </div>
@@ -316,45 +314,69 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar with notification bell */}
-        <header className="flex items-center justify-end px-6 py-2.5 border-b border-slate-200 bg-white flex-shrink-0">
+        {/* Top bar with hamburger + notification bell */}
+        <header className="flex items-center justify-between px-4 sm:px-6 py-2.5 border-b border-slate-200 bg-white flex-shrink-0">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden p-2 -ml-1 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <div className="hidden lg:block" />
+
+          {/* Notification bell */}
           <div className="relative">
             <button
               onClick={() => setShowNotifs(!showNotifs)}
-              className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition"
+              className="relative p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              aria-label="Notifications"
             >
               <Bell className="w-5 h-5" />
               {unread > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
                   {unread > 9 ? '9+' : unread}
                 </span>
               )}
             </button>
+
+            {/* Notification dropdown */}
             {showNotifs && (
-              <div className="absolute right-0 mt-1 w-80 bg-white rounded-xl border border-slate-200 shadow-lg z-50 overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                  <span className="text-sm font-bold text-slate-700">Notifications</span>
+                  <span className="text-sm font-bold text-slate-900">Notifications</span>
                   {unread > 0 && (
-                    <button onClick={handleMarkAll} className="text-xs text-indigo-500 hover:text-indigo-700 font-medium transition">Mark all read</button>
+                    <button
+                      onClick={handleMarkAll}
+                      className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold"
+                    >
+                      Mark all read
+                    </button>
                   )}
                 </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {notifs.length === 0 ? (
-                    <p className="text-sm text-slate-400 text-center py-6">All caught up!</p>
-                  ) : (
-                    notifs.slice(0, 10).map(n => (
-                      <div key={n.id} className="px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
+                {notifs.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <Bell className="w-6 h-6 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm text-slate-400">No notifications</p>
+                  </div>
+                ) : (
+                  <div className="max-h-64 overflow-y-auto divide-y divide-slate-100">
+                    {notifs.slice(0, 10).map(n => (
+                      <div key={n.id} className={`px-4 py-3 ${!n.read ? 'bg-indigo-50/50' : ''}`}>
                         <p className="text-xs font-semibold text-slate-700">{n.title}</p>
-                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">{n.message}</p>
                       </div>
-                    ))
-                  )}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
         </header>
-        <main className="flex-1 overflow-auto bg-slate-50">
+
+        {/* Scrollable main content */}
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

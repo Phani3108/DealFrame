@@ -64,8 +64,14 @@ def parse_call_record_notification(payload: Dict[str, Any]) -> List[Dict[str, st
         # resource format: "communications/callRecords/{id}"
         parts = resource.rstrip("/").split("/")
         if len(parts) >= 2:
+            call_id = parts[-1]
+        else:
+            # Fallback: extract from resourceData.id
+            rd = notif.get("resourceData", {})
+            call_id = rd.get("id", "")
+        if call_id:
             results.append({
-                "call_record_id": parts[-1],
+                "call_record_id": call_id,
                 "subscription_id": notif.get("subscriptionId", ""),
                 "change_type": notif.get("changeType", ""),
             })

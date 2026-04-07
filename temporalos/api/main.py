@@ -5,6 +5,7 @@
 
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -16,6 +17,8 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from ..config import get_settings
 from ..db.session import init_db
 from ..observability.telemetry import setup_telemetry
+
+logger = logging.getLogger(__name__)
 from .routes import (
     finetuning, intelligence, local, metrics, observatory, process, search, stream,
 )
@@ -108,6 +111,35 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as exc:
         _log.warning("Auto-seed skipped: %s", exc)
 
+    # ── Seed YouTube demo data + agents ────────────────────────────────────
+    from .routes.process import _jobs
+    if len(_jobs) == 0:
+        # No jobs at all — generate from scratch into cache + DB + agents
+        try:
+            from scripts.seed_youtube_demo import seed_all as yt_seed_all
+            stats = await yt_seed_all()
+            logger.info("Auto-seeded YouTube demo: %s", stats)
+        except Exception as exc:
+            logger.warning("YouTube auto-seed skipped: %s", exc)
+    else:
+        # Jobs exist (loaded from DB) — seed agents from cached jobs
+        try:
+            from scripts.seed_youtube_demo import (
+                generate_youtube_seed, seed_agents, seed_search_index,
+            )
+            data = generate_youtube_seed()
+            # Only seed agents for jobs that are in the cache
+            agent_stats = seed_agents(data)
+            search_count = seed_search_index(data)
+            logger.info(
+                "Seeded agents from %d cached jobs: QA=%d risk=%d KG=%d search=%d",
+                len(_jobs), agent_stats["qa_indexed"],
+                agent_stats["risk_alerts"], agent_stats["kg_entities"],
+                search_count,
+            )
+        except Exception as exc:
+            logger.warning("Agent seed from cache skipped: %s", exc)
+
     yield
 
 
@@ -146,8 +178,8 @@ async def _rebuild_search_index_from_db(session_factory) -> None:
 
 
 app = FastAPI(
-    title="TemporalOS",
-    description="Video → Structured Decision Intelligence Engine",
+    title="DealFrame",
+    description="Video → Structured Procurement & Negotiation Intelligence Engine",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -216,6 +248,15 @@ app.include_router(pattern_routes.router, prefix="/api/v1")
 app.include_router(copilot_routes.router, prefix="/api/v1")
 app.include_router(admin_routes.router, prefix="/api/v1")
 app.include_router(seed_routes.router, prefix="/api/v1")
+
+
+# ── Seed endpoint ──────────────────────────────────────────────────────────
+@app.post("/api/v1/seed/youtube", tags=["seed"])
+async def seed_youtube_demo() -> dict:
+    """Seed demo data from YouTube videos. Idempotent — safe to call multiple times."""
+    from scripts.seed_youtube_demo import seed_all as yt_seed_all
+    stats = await yt_seed_all()
+    return {"status": "seeded", **stats}
 
 
 @app.get("/health", tags=["meta"])

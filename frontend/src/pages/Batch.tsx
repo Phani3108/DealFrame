@@ -116,7 +116,7 @@ export function Batch() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Layers className="w-6 h-6 text-indigo-500" />
@@ -136,7 +136,7 @@ export function Batch() {
           onChange={e => setUrlsText(e.target.value)}
         />
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-slate-500 mb-1 block">Vertical</label>
             <select

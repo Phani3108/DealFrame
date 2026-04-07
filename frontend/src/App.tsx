@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { LandingPage } from './pages/LandingPage'
 import { Dashboard } from './pages/Dashboard'
 import { Upload } from './pages/Upload'
 import { Results } from './pages/Results'
@@ -29,12 +30,25 @@ import { SettingsPage } from './pages/SettingsPage'
 // Lazy-load Recharts-heavy Intelligence page to avoid headless/SSR crashes
 const Intelligence = lazy(() => import('./pages/Intelligence').then(m => ({ default: m.Intelligence })))
 
+/** Wraps child routes in the sidebar Layout */
+function AppShell() {
+  return (
+    <Layout>
+      <Outlet />
+    </Layout>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
+      <Routes>
+        {/* Landing page — full-screen, no sidebar */}
+        <Route path="/" element={<LandingPage />} />
+
+        {/* App pages — wrapped in sidebar layout */}
+        <Route element={<AppShell />}>
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/results/:jobId" element={<Results />} />
           <Route path="/observatory" element={<Observatory />} />
@@ -63,8 +77,8 @@ export default function App() {
           <Route path="/copilot" element={<LiveCopilot />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
-      </Layout>
+        </Route>
+      </Routes>
     </BrowserRouter>
   )
 }

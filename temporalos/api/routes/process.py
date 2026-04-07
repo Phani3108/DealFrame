@@ -148,6 +148,17 @@ def _run_pipeline(job_id: str, video_path: str, frames_dir: str) -> None:
             _jobs[job_id]["stages_done"].append("transcription")
             span.set_attribute("pipeline.word_count", len(words))
 
+            # ── Stage 2b: Speaker diarization
+            from ...diarization.diarizer import get_diarizer
+            diarizer = get_diarizer()
+            words = diarizer.diarize(words)
+            _jobs[job_id]["stages_done"].append("diarization")
+
+            # ── Stage 2c: Speaker intelligence
+            from ...diarization.speaker_intel import compute_speaker_intelligence
+            speaker_intel = compute_speaker_intelligence(words)
+            _jobs[job_id]["stages_done"].append("speaker_intelligence")
+
             # ── Stage 3: Temporal alignment
             segments = align(frames, words)
             _jobs[job_id]["stages_done"].append("alignment")
@@ -176,6 +187,7 @@ def _run_pipeline(job_id: str, video_path: str, frames_dir: str) -> None:
                 "segments": results,
                 "overall_risk_score": overall_risk,
                 "segment_count": len(results),
+                "speaker_intelligence": speaker_intel.to_dict(),
             }
             span.set_attribute("pipeline.segments_extracted", len(results))
 

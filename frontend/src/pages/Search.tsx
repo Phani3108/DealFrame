@@ -124,7 +124,7 @@ export function Search() {
   }
 
   return (
-    <div className="p-8 max-w-5xl animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl animate-fade-in">
       {/* Header */}
       <div className="mb-8">
         <h1 className="page-title">Search</h1>
@@ -207,7 +207,7 @@ export function Search() {
         </div>
 
         {insightsLoaded && (
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Win/Loss patterns */}
             <div className="bg-white rounded-xl border border-slate-200 p-5">
               <h3 className="text-sm font-semibold text-slate-900 mb-3">Top Risk Objections</h3>

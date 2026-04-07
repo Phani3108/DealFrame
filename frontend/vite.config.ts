@@ -4,10 +4,13 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000,
+    port: parseInt(process.env.PORT || '3000', 10),
     proxy: {
-      '/api': 'http://localhost:8000',
-      '/health': 'http://localhost:8000',
+      '/api': 'http://localhost:8002',
+      '/health': 'http://localhost:8002',
+      '/docs': 'http://localhost:8002',
+      '/redoc': 'http://localhost:8002',
+      '/openapi.json': 'http://localhost:8002',
     },
   },
   build: {

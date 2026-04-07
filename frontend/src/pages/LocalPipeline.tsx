@@ -97,7 +97,7 @@ export function LocalPipeline() {
   }
 
   return (
-    <div className="p-8 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="page-title">Local Pipeline</h1>
@@ -109,7 +109,7 @@ export function LocalPipeline() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Status panel */}
         <div className="col-span-1 space-y-4">
           <div className="card p-5">
@@ -201,7 +201,7 @@ export function LocalPipeline() {
               <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide mb-3">
                 Latest Result
               </p>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <p className="text-xs text-slate-500">Extractor</p>
                   <p className="font-semibold text-slate-800 capitalize">{polledJob.result.extraction_model}</p>
@@ -216,7 +216,7 @@ export function LocalPipeline() {
                 </div>
               </div>
               {Object.keys(polledJob.result.stage_latencies_ms).length > 0 && (
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {Object.entries(polledJob.result.stage_latencies_ms).map(([stage, ms]) => (
                     <div key={stage} className="text-xs">
                       <span className="text-slate-500 capitalize">{stage.replace(/_ms$/, '').replace(/_/g, ' ')}</span>

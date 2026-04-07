@@ -30,7 +30,7 @@ class WebhookUpdateRequest(BaseModel):
 @router.get("")
 async def list_webhooks() -> dict:
     registry = get_webhook_registry()
-    webhooks = registry.list_webhooks()
+    webhooks = registry.list()
     return {"webhooks": [w.to_dict() for w in webhooks], "total": len(webhooks)}
 
 

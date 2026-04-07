@@ -25,7 +25,7 @@ async def get_speaker_intelligence(job_id: str) -> dict:
         raise HTTPException(400, f"Job '{job_id}' is not yet completed (status={job.get('status')})")
 
     # Prefer pre-computed speaker_intelligence stored during processing
-    si = job.get("speaker_intelligence")
+    si = job.get("speaker_intelligence") or (job.get("result") or {}).get("speaker_intelligence")
     if si:
         return {"job_id": job_id, "speaker_intelligence": si}
 

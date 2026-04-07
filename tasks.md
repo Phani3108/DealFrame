@@ -19,32 +19,87 @@
 
 ## Active Tasks
 
-### TASK-031: Core Loop Fix — YouTube Ingestion + Negotiation Intel for All Verticals
+### TASK-036: Populate Video/Segment/Extraction Tables for Intelligence Endpoints
 - **Status**: 🟢 Completed
-- **Date**: 2026-03-29
-- **Prompt/Trigger**: User audit: YouTube video links added earlier have no stats extracted; dashboard shows all zeros; earlier stubs not fixed; project direction review.
+- **Date**: 2026-03-27
+- **Prompt/Trigger**: Intelligence endpoints (/intelligence/objections, /intelligence/risk/summary) returned empty because they query Video/Segment/Extraction tables, not JobRecord
 - **Work Done**:
-  - **Project audit**: Identified that YouTube ingestion was completely absent (no yt-dlp, no URL handler). Dashboard zeros explained — empty DB, not a bug. Identified 5 unfixed stubs.
-  - **YouTube/URL ingestion** (`temporalos/ingestion/url_downloader.py`, NEW): Async `download_video()` using yt-dlp. Supports YouTube, Vimeo, Loom, and any yt-dlp compatible platform. Returns local mp4 path. `is_supported_url()` helper for validation.
-  - **Process endpoint** (`temporalos/api/routes/process.py`): `POST /process` now accepts either `file` (multipart upload) OR `video_url` (form field). Download path uses `download_video()` synchronously before pipeline runs. Returns `source_url` in response.
-  - **yt-dlp dependency** (`pyproject.toml`): Added `yt-dlp>=2024.1.0` to core dependencies.
-  - **Negotiation intel for ALL verticals** (`temporalos/verticals/base.py`): `VerticalPack.extract()` now auto-calls `enrich_segment_negotiation_intel()` after each vertical's own logic. Subclasses renamed from `extract()` to `_vertical_extract()` (Sales, CustomerSuccess, RealEstate, UXResearch, Procurement). Opt-out via `enrich_with_negotiation_intel = False`. Removed duplicate call from `ProcurementPack`.
-  - **Search re-indexing fix** (`temporalos/api/routes/search.py`): `POST /search/index/{video_id}` now loads `SearchDocRecord` rows from DB and re-indexes into the in-memory TF-IDF engine. Returns segment count.
-  - **KG persistence** (`temporalos/agents/knowledge_graph.py`, `temporalos/api/routes/agents.py`): `POST /agents/kg/index/{job_id}` now persists nodes/edges to `KGNodeRecord`/`KGEdgeRecord` DB tables after indexing. `get_knowledge_graph()` warm-starts from DB on first access after server restart.
+  - Updated `scripts/run_seed.py` to also create Video, Segment, and Extraction rows from YouTube seed data
+  - Updated `scripts/seed_youtube_demo.py` `seed_into_db()` with matching logic for server auto-seed
+  - Fixed async lazy-loading bug in `VideoAggregator.top_objections()` — added `selectinload(Extraction.segment)` to eagerly load segments
+  - Verified: 11 videos, 82 segments, 82 extractions, 10 objections with risk scores, risk summary with avg 0.359
 - **Files Changed**:
-  - `temporalos/ingestion/url_downloader.py` (NEW)
-  - `temporalos/api/routes/process.py`
-  - `temporalos/api/routes/search.py`
-  - `temporalos/api/routes/agents.py`
-  - `temporalos/agents/knowledge_graph.py`
-  - `temporalos/verticals/base.py`
-  - `temporalos/verticals/sales.py`
-  - `temporalos/verticals/customer_success.py`
-  - `temporalos/verticals/real_estate.py`
-  - `temporalos/verticals/ux_research.py`
-  - `temporalos/verticals/procurement.py`
-  - `pyproject.toml`
-- **Notes**: Dashboard will populate once at least one video is processed end-to-end with API keys configured. YouTube URLs can now be submitted via `video_url` form field.
+  - Modified: `scripts/run_seed.py`, `scripts/seed_youtube_demo.py`, `temporalos/intelligence/aggregator.py`
+
+### TASK-035: YouTube Demo Data Seeding — 11 Videos with Realistic Scores
+- **Status**: 🟢 Completed
+- **Date**: 2026-03-27
+- **Prompt/Trigger**: User provided 11 YouTube URLs: "Calculate some approximate scores for demo purpose. Plan this better."
+- **Work Done**:
+  - Created `scripts/seed_youtube_demo.py` — 500+ LOC with 11 YouTube videos, handcrafted realistic metadata (companies, contacts, reps, deal IDs, scenarios)
+  - 82 segments across 11 videos with topics, sentiment, risk scores, objections, decision signals, transcripts
+  - Created `scripts/run_seed.py` — direct DB seeding script
+  - Auto-seed on server startup via `temporalos/api/main.py` lifespan
+  - Seeded all agents: QA (82 docs), risk (11 deals), coaching (7 reps), KG (287 entities), meeting prep (11)
+  - Search index populated with 82 entries
+- **Files Changed**:
+  - New: `scripts/seed_youtube_demo.py`, `scripts/run_seed.py`
+  - Modified: `temporalos/api/main.py`, `frontend/vite.config.ts` (proxy → 8002)
+
+### TASK-034: Mobile Responsive Frontend — Full Overhaul
+- **Status**: 🟢 Completed
+- **Date**: 2026-03-27
+- **Prompt/Trigger**: User: "Keep the site mobile compatible with webp and make it usable."
+- **Work Done**:
+  - Layout.tsx: Hamburger menu with animated sidebar, overlay, auto-close on route change
+  - All 25 pages: Responsive padding `p-4 sm:p-6 lg:p-8`
+  - Dashboard + 12 pages: Responsive grids (grid-cols-1 → sm → lg breakpoints)
+  - Tables in AuditLog, Admin, Results: Added overflow-x-auto with min-width
+  - Global CSS: Touch targets (44px min), safe-area-inset, responsive typography, pointer-based scrollbar rules
+- **Files Changed**:
+  - Modified: `frontend/src/components/Layout.tsx`, `frontend/src/index.css`, all 25 page components
+
+### TASK-033: Enhanced Extraction — Few-shot Prompts + Improved Fallback + 22 Tests
+- **Status**: 🟢 Completed
+- **Date**: 2026-03-27
+- **Prompt/Trigger**: Continuation of build priorities — extraction router improvements compound across all downstream modules.
+- **Work Done**:
+  - **Few-shot system prompt**: Added 3 concrete examples (pricing objection, feature/buying signal, competition/security) with expected JSON output to `EXTRACTION_SYSTEM` prompt in `temporalos/extraction/router.py`
+  - **Enhanced fallback extractor**: Replaced minimal fallback with 40+ keyword patterns across 8 topic categories (pricing, features, competition, timeline, security, onboarding, support, legal), 15 objection phrases, 11 decision signal phrases, weighted topic scoring, sentiment analysis via neg/pos word counting, risk clamping
+  - **E2E tests**: 22 tests across 3 classes — SystemPrompt (4), FallbackExtractor (15), LLMRouterIntegration (3)
+- **Files Changed**:
+  - Modified: `temporalos/extraction/router.py`
+  - New: `tests/e2e/test_extraction_enhanced.py`
+- **Tests**: 894 passed, 0 failures, 1 skip
+
+### TASK-032: Speaker Intelligence Pipeline Wiring + 22 Tests
+- **Status**: 🟢 Completed
+- **Date**: 2026-03-27
+- **Prompt/Trigger**: Subagent analysis identified SpeakerIntelligence as #1 priority — code existed but wasn't wired into pipeline.
+- **Work Done**:
+  - Wired diarization (Stage 2b) and speaker intelligence (Stage 2c) into `_run_pipeline` in `temporalos/api/routes/process.py`
+  - Created comprehensive E2E test suite: 22 tests across 6 classes (SpeakerStats, SpeakerIntelligence, DiarizationIntegration, CoachingIntegration, PipelineIntegration, EdgeCases)
+  - Fixed diarization route to check `job["result"]["speaker_intelligence"]`
+- **Files Changed**:
+  - Modified: `temporalos/api/routes/process.py`, `temporalos/api/routes/diarization.py`
+  - New: `tests/e2e/test_speaker_intelligence.py`
+- **Tests**: 872 passed, 0 failures, 1 skip
+
+### TASK-031: Fix All 16 Pre-existing Test Failures — Zero Failures
+- **Status**: 🟢 Completed
+- **Date**: 2026-03-27
+- **Prompt/Trigger**: User: "Understand the entire project & let's continue building." Rule §0 requires 0 failures before building new features.
+- **Work Done**:
+  - **Phase A Schema tests (5 fixes)**: Tests used old API (passing `SchemaDefinition` objects to `registry.create()`). Updated to use correct `create(name=, description=, fields=)` signature. Added missing `description` param to `FieldDefinition` constructors.
+  - **Phase A Webhook tests (3 fixes)**: Tests constructed `WebhookConfig` directly (missing `id`). Updated to use `registry.create(url=, events=, description=)`. Fixed `WebhookEvent.RISK_HIGH` → `WebhookEvent.HIGH_RISK_DETECTED`. Fixed `results[0]["http_status"]` → `results[0]["status"]`. Added `**kwargs` to `fake_urlopen` to accept `timeout` kwarg.
+  - **Phase A Custom Summary (1 fix)**: `_custom()` returned empty content when no template provided. Added default template: `"Custom summary: {{segment_count}} segments analyzed."`.
+  - **Phase B Google Meet (2 fixes)**: Header key casing mismatch — added `X-Goog-Channel-Id` / `X-Goog-Resource-Id` fallbacks. Implemented `find_recording_in_drive()` stub to actually call `drive_service.files().list().execute()`. Fixed return type `Optional[str]` → `Optional[Dict[str, Any]]`.
+  - **Phase B Teams (1 fix)**: `parse_call_record_notification()` only checked `notif["resource"]` path. Added fallback to extract ID from `notif["resourceData"]["id"]`.
+  - **Phase 5/6 numpy (2 fixes)**: `from transformers import AutoProcessor` threw `ValueError` (numpy binary mismatch). Changed `except ImportError` → `except (ImportError, ValueError, Exception)` in local status endpoint.
+  - **Phase J Patterns (2 fixes)**: Route called `miner.mine()` which doesn't exist. Rewrote route to use correct `add_call()` + `mine_patterns()` API. Added category mapping (`objection_risk`→`objection`, `topic_risk`→`topic`, etc).
+- **Files Changed**:
+  - Modified: `tests/e2e/test_phase_a_platform.py`, `temporalos/summarization/engine.py`, `temporalos/integrations/meet.py`, `temporalos/integrations/teams.py`, `temporalos/api/routes/local.py`, `temporalos/api/routes/patterns.py`
+- **Tests**: 849 passed, 0 failures, 1 skip (up from 833 passed, 16 failures)
 
 ### TASK-030: DealFrame Rename + Progressive Disclosure UX
 - **Status**: 🟢 Completed
@@ -679,3 +734,6 @@
 | TASK-012 | Phase 9 — Scene Intelligence & Vision Pipeline | 🟢 | 2026-06-11 |
 | TASK-013 | Phase 10 — Search & Portfolio Insights | 🟢 | 2026-06-11 |
 | TASK-014 | Frontend UI/UX Overhaul | 🟢 | 2026-06-12 |
+| TASK-031 | Fix All 16 Pre-existing Test Failures | 🟢 | 2026-03-27 |
+| TASK-032 | Speaker Intelligence Pipeline Wiring | 🟢 | 2026-03-27 |
+| TASK-033 | Enhanced Extraction — Few-shot + Fallback | 🟢 | 2026-03-27 |

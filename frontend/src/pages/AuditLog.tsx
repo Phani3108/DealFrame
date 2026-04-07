@@ -34,7 +34,7 @@ export function AuditLog() {
   }
 
   return (
-    <div className="p-8 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
       {/* Header */}
       <div className="relative mb-8 bg-gradient-to-br from-violet-600 via-violet-700 to-purple-800 rounded-2xl p-7 overflow-hidden shadow-lg shadow-violet-900/20">
         <div className="relative">
@@ -79,8 +79,8 @@ export function AuditLog() {
           <p className="text-slate-500 text-sm">No audit entries match the current filters.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/50">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Time</th>

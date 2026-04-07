@@ -69,7 +69,7 @@ export function SettingsPage() {
   )
 
   return (
-    <div className="p-8 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
       {/* Header */}
       <div className="relative mb-8 bg-gradient-to-br from-slate-600 via-slate-700 to-gray-800 rounded-2xl p-7 overflow-hidden shadow-lg shadow-slate-900/20">
         <div className="relative flex items-start justify-between">

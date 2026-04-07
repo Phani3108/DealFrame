@@ -73,7 +73,7 @@ export function Annotations() {
   }
 
   return (
-    <div className="p-8 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
       {/* Header */}
       <div className="relative mb-8 bg-gradient-to-br from-teal-600 via-teal-700 to-cyan-800 rounded-2xl p-7 overflow-hidden shadow-lg shadow-teal-900/20">
         <div className="relative flex items-start justify-between">

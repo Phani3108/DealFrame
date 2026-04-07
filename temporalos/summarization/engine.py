@@ -250,6 +250,8 @@ class MockSummaryEngine:
                        len(content.split()), "rule-based")
 
     def _custom(self, segs: list, template: str) -> Summary:
+        if not template:
+            template = "Custom summary: {{segment_count}} segments analyzed."
         content = template.replace("{{segment_count}}", str(len(segs)))
         return Summary(SummaryType.CUSTOM, content, {}, len(content.split()), "rule-based")
 

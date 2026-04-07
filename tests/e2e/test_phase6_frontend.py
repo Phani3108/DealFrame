@@ -73,7 +73,7 @@ class TestFrontendDistStructure:
 
     def test_index_html_has_correct_title(self):
         html = (_FRONTEND_DIST / "index.html").read_text()
-        assert "TemporalOS" in html
+        assert "DealFrame" in html or "TemporalOS" in html
 
 
 # ── FastAPI static file serving ───────────────────────────────────────────────
@@ -90,7 +90,7 @@ class TestFrontendServing:
 
     def test_root_contains_temporalos_title(self, client: TestClient):
         resp = client.get("/")
-        assert "TemporalOS" in resp.text
+        assert "DealFrame" in resp.text or "TemporalOS" in resp.text
 
     def test_root_contains_root_div(self, client: TestClient):
         resp = client.get("/")

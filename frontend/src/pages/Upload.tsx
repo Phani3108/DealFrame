@@ -142,7 +142,7 @@ export function Upload() {
   }
 
   return (
-    <div className="p-8 max-w-2xl animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-2xl animate-fade-in">
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
@@ -329,7 +329,7 @@ export function Upload() {
           {runStatus === 'idle' && (
             <>
               {/* Vertical + Schema selectors */}
-              <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-500 mb-1 block">Vertical</label>
                   <select

@@ -35,7 +35,7 @@ class SchemaUpdateRequest(BaseModel):
 @router.get("")
 async def list_schemas() -> dict:
     registry = get_schema_registry()
-    schemas = registry.list_schemas()
+    schemas = registry.list()
     return {"schemas": [s.to_dict() for s in schemas], "total": len(schemas)}
 
 

@@ -22,11 +22,19 @@ async def init_db() -> None:
     from ..config import get_settings
 
     settings = get_settings()
-    _engine = create_async_engine(
-        settings.effective_database_url,
-        echo=settings.app.env == "development",
-        pool_pre_ping=True,
-    )
+    url = settings.effective_database_url
+
+    engine_kwargs: dict = {
+        "echo": settings.app.env == "development",
+        "pool_pre_ping": True,
+    }
+    # SQLite requires special async handling
+    if url.startswith("sqlite"):
+        from sqlalchemy.pool import StaticPool
+        engine_kwargs["connect_args"] = {"check_same_thread": False}
+        engine_kwargs["poolclass"] = StaticPool
+
+    _engine = create_async_engine(url, **engine_kwargs)
     _AsyncSessionLocal = async_sessionmaker(_engine, expire_on_commit=False)
 
     async with _engine.begin() as conn:

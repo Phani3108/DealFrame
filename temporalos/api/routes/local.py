@@ -68,7 +68,7 @@ async def local_status() -> dict:
     try:
         from transformers import AutoProcessor  # noqa: F401
         qwen_available = True
-    except ImportError:
+    except (ImportError, ValueError, Exception):
         qwen_available = False
 
     return {
